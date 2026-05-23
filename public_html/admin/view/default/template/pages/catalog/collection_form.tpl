@@ -16,7 +16,16 @@ echo $collection_tabs ?>
 						<i class="fa fa-plus fa-fw"></i>
 					</a>
 				</div>
-			<?php } ?>
+			<?php }
+            if ($preview) { ?>
+                <div class="btn-group">
+                    <a class="btn btn-white lock-on-click tooltips" target="_blank"
+                       href="<?php echo $preview; ?>" data-toggle="tooltip"
+                       data-original-title="<?php echo_html2view($text_view); ?>">
+                        <i class="fa fa-external-link"></i>
+                    </a>
+                </div>
+            <?php } ?>
 		</div>
 		<?php include($tpl_common_dir . 'content_buttons.tpl'); ?>
 	</div>
@@ -120,12 +129,6 @@ echo $collection_tabs ?>
 			<a class="btn btn-default" href="<?php echo $cancel; ?>">
 				<i class="fa fa-arrow-left fa-fw"></i> <?php echo $form['cancel']->text; ?>
 			</a>
-			<?php if($form['show_on_storefront']){ ?>
-			<a class="btn btn-info" target="_blank"
-			href="<?php echo $form['show_on_storefront']->href; ?>">
-			<i class="fa fa-external-link"></i> <?php echo $form['show_on_storefront']->text; ?>
-			</a>
-			<?php } ?>
 		</div>
 	</div>
 	</form>

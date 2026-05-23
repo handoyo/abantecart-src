@@ -4,9 +4,9 @@
 
 <div class="container-fluid">
     <?php
-    if ($description) { ?>
-    <div class=" container m-4"><?php echo $description; ?></div>
-<?php }
+    if ($content) { ?>
+        <div class="container p-4"><?php echo html_entity_decode($content); ?></div>
+    <?php }
     if (!$categories && !$products) { ?>
     <div class="content"><?php echo $text_error; ?></div>
 <?php }

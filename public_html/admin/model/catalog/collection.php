@@ -1,21 +1,23 @@
 <?php
+/** @noinspection PhpMultipleClassDeclarationsInspection */
+
 /*
  *   $Id$
  *
  *   AbanteCart, Ideal OpenSource Ecommerce Solution
  *   http://www.AbanteCart.com
  *
- *   Copyright © 2011-2025 Belavier Commerce LLC
+ *   Copyright © 2011-2026 Belavier Commerce LLC
  *
  *   This source file is subject to Open Software License (OSL 3.0)
- *   License details is bundled with this package in the file LICENSE.txt.
+ *   License details are bundled with this package in the file LICENSE.txt.
  *   It is also available at this URL:
  *   <http://www.opensource.org/licenses/OSL-3.0>
  *
  *  UPGRADE NOTE:
  *    Do not edit or add to this file if you wish to upgrade AbanteCart to newer
  *    versions in the future. If you wish to customize AbanteCart for your
- *    needs please refer to http://www.AbanteCart.com for more information.
+ *    needs, please refer to http://www.AbanteCart.com for more information.
  */
 if (!defined('DIR_CORE') || !IS_ADMIN) {
     header('Location: static_pages/');
@@ -23,167 +25,183 @@ if (!defined('DIR_CORE') || !IS_ADMIN) {
 
 class ModelCatalogCollection extends Model
 {
+    public function __construct($registry)
+    {
+        parent::__construct($registry);
+        $this->data['description_column_list'] = ['title', 'meta_keywords', 'meta_description','content'];
+    }
+
     /**
-     * @param array $data
+     * @param array $inData
      *
      * @return bool
      * @throws AException
      */
-    public function insert(array $data)
+    public function insert(array $inData)
     {
-        $keyword = '';
-        $db = $this->db;
-        $languageId = $this->language->getContentLanguageID();
+        if (!$inData) {
+            return false;
+        }
+        $languageId = (int) $inData['language_id'] ? : $this->language->getContentLanguageID();
 
-        if (isset($data['condition_object'])) {
-            unset($data['condition_object']);
+        $stores = array_map( 'intval', array_map('trim', (array) $inData['stores']));
+        unset($inData['stores']);
+
+        if (isset($inData['condition_object'])) {
+            unset($inData['condition_object']);
         }
 
-        if (isset($data['keyword'])) {
-            $keyword = $data['keyword'];
-            unset($data['keyword']);
-        }
+        $keyword = $inData['keyword'] ?? '';
+        unset($inData['keyword']);
 
         $descriptionData = [
             'language_id' => $languageId,
         ];
-        if (isset($data['title'])) {
-            $descriptionData['title'] = $data['title'];
-            unset($data['title']);
+
+        foreach ($this->data['description_column_list'] as $field) {
+            if (isset($inData[$field])) {
+                $descriptionData[$field] = $inData[$field];
+                unset($inData[$field]);
+            }
         }
 
-        if (isset($data['meta_keywords'])) {
-            $descriptionData['meta_keywords'] = $data['meta_keywords'];
-            unset($data['meta_keywords']);
-        }
-
-        if (isset($data['meta_description'])) {
-            $descriptionData['meta_description'] = $data['meta_description'];
-            unset($data['meta_description']);
-        }
-
-        $keys = array_keys($data);
-        $values = array_values($data);
+        $keys = array_keys($inData);
+        $values = array_values($inData);
 
         foreach ($values as &$value) {
-            $value = is_array($value) ? $db->escape(json_encode($value)) : $db->escape($value);
+            $value = $this->db->escape(is_array($value) ? json_encode($value) : $value);
         }
 
-        $query = "INSERT INTO " . $db->table('collections') . " (" . implode(',', $keys) . ") 
+        $query = "INSERT INTO " . $this->db->table("collections") . " 
+                    (" . implode(',', $keys) . ") 
                 VALUES ('" . implode("','", $values) . "')";
-        $result = $db->query($query);
-        if ($result) {
-            $collectionId = (int)$db->getLastId();
-            $descriptionData['collection_id'] = (int)$collectionId;
+        $this->db->query($query);
 
-            $this->updateOrCreateDescription($descriptionData);
+        $collectionId = $descriptionData['collection_id'] = (int) $this->db->getLastId();
+        $this->updateOrCreateDescription($collectionId, $languageId, $descriptionData);
 
-            if ($keyword) {
-                $seo_key = SEOEncode($keyword, 'collection_id', $collectionId);
-            } else {
-                //Default behavior to save SEO URL keyword from collection name in default language
-                $seo_key = SEOEncode(
-                    $descriptionData['title'] ?: $data['name'],
-                    'collection_id',
-                    $collectionId
-                );
-            }
-            if ($seo_key) {
-                $this->language->replaceDescriptions(
-                    'url_aliases',
-                    ['query' => "collection_id=" . $collectionId],
-                    [$languageId => ['keyword' => $seo_key]]
-                );
-            } else {
-                $db->query(
-                    "DELETE FROM " . $db->table("url_aliases") . " 
-                    WHERE query = 'collection_id=" . $collectionId . "' AND language_id = " . $languageId
-                );
-            }
-            return $this->getById($collectionId);
+        if ($keyword) {
+            $seo_key = SEOEncode($keyword, 'collection_id', $collectionId);
+        } else {
+            //Default behavior to save SEO URL keyword from collection name in default language
+            $seo_key = SEOEncode(
+                $descriptionData['title'] ? : $inData['name'],
+                'collection_id',
+                $collectionId
+            );
         }
-        return true;
+        if ($seo_key) {
+            $this->language->replaceDescriptions(
+                'url_aliases',
+                ['query' => "collection_id=" . $collectionId],
+                [$languageId => ['keyword' => $seo_key]]
+            );
+        } else {
+            $this->db->query(
+                "DELETE FROM " . $this->db->table("url_aliases") . " 
+                WHERE query = 'collection_id=" . $collectionId . "' 
+                    AND language_id = " . $languageId
+            );
+        }
+
+        if ($stores) {
+            foreach ($stores as $store_id) {
+                $this->db->query(
+                    "INSERT INTO " . $this->db->table("collections_to_stores") . " 
+                        SET collection_id = '" . $collectionId . "', 
+                            store_id = " . $store_id
+                );
+            }
+        }
+        
+        return $this->getById($collectionId);
     }
 
     /**
-     * @param int $id
-     * @param array $data
+     * @param int $collectionId
+     * @param array $inData
      *
      * @return bool
      * @throws AException
      */
-    public function update($id, $data)
+    public function update(int $collectionId, array $inData)
     {
-        if (!(int)$id) {
+        if (!$collectionId || !$inData) {
             return false;
         }
-        $db = Registry::getInstance()->get('db');
-        $language = Registry::getInstance()->get('language');
-
-        $colTableName = $db->table('collections');
+        $languageId = (int) $inData['language_id'] ? : $this->language->getContentLanguageID();
+        $stores = array_map( 'intval', array_map('trim', (array) $inData['stores']));
+        unset($inData['stores']);
 
         $descriptionData = [
-            'language_id'   => $language->getContentLanguageID(),
-            'collection_id' => (int)$id,
+            'language_id'   => $languageId,
+            'collection_id' => $collectionId,
         ];
-        if (isset($data['title'])) {
-            $descriptionData['title'] = $data['title'];
-            unset($data['title']);
+
+        foreach ($this->data['description_column_list'] as $field) {
+            if (isset($inData[$field])) {
+                $descriptionData[$field] = $inData[$field];
+                unset($inData[$field]);
+            }
         }
 
-        if (isset($data['meta_keywords'])) {
-            $descriptionData['meta_keywords'] = $data['meta_keywords'];
-            unset($data['meta_keywords']);
+        if (isset($inData['condition_object'])) {
+            unset($inData['condition_object']);
         }
 
-        if (isset($data['meta_description'])) {
-            $descriptionData['meta_description'] = $data['meta_description'];
-            unset($data['meta_description']);
-        }
-
-        if (isset($data['condition_object'])) {
-            unset($data['condition_object']);
-        }
-
-        if (isset($data['keyword'])) {
-            $keyword = $data['keyword'];
-            unset($data['keyword']);
-        }
+        $keyword = $inData['keyword'] ?? '';
+        unset($inData['keyword']);
 
         $arUpdate = [];
-        foreach ($data as $key => $val) {
-            $arUpdate[] = $key . '=\'' . (($key != 'conditions') ? $db->escape($val) : json_encode($val)) . '\'';
+        foreach ($inData as $key => $val) {
+            $arUpdate[] = $key . " = '" . $this->db->escape(is_array($val) ? json_encode($val) : $val) . "'";
         }
 
         if (!empty($arUpdate)) {
-            $query = 'UPDATE ' . $colTableName . ' SET ' . implode(',', $arUpdate) . ' WHERE id=' . $id;
-            $db->query($query);
+            $query = "UPDATE " . $this->db->table('collections') . " 
+                    SET " . implode(',', $arUpdate) . " 
+                    WHERE id=" . $collectionId;
+            $this->db->query($query);
         }
 
-        if (!empty($descriptionData)) {
-            $this->updateOrCreateDescription($descriptionData);
+        if ($descriptionData) {
+            $this->updateOrCreateDescription($collectionId, $languageId, $descriptionData);
+        }
+
+        if ($stores) {
+            $this->db->query(
+                "DELETE FROM " . $this->db->table("collections_to_stores") . " 
+                WHERE collection_id = '" . $collectionId . "'"
+            );
+            foreach ($stores as $storeId) {
+                $this->db->query(
+                    "INSERT INTO " . $this->db->table("collections_to_stores") . " 
+                    SET collection_id = '" . $collectionId . "', 
+                        store_id = '" . (int)$storeId . "'"
+                );
+            }
         }
 
         if (isset($keyword)) {
             $keyword = SEOEncode($keyword);
             if ($keyword) {
-                $language->replaceDescriptions(
+                $this->language->replaceDescriptions(
                     'url_aliases',
                     [
-                        'query' => 'collection_id=' . (int)$id
+                        'query' => 'collection_id=' . $collectionId,
                     ],
                     [
-                        (int)$language->getContentLanguageID() => [
-                            'keyword' => $keyword
-                        ]
+                        $languageId => [
+                            'keyword' => $keyword,
+                        ],
                     ]
                 );
             } else {
-                $db->query(
-                    'DELETE
-                    FROM ' . $db->table('url_aliases') . " 
-                    WHERE query = 'collection_id=" . (int)$id . "'
-                        AND language_id = '" . (int)$language->getContentLanguageID() . "'"
+                $this->db->query(
+                    "DELETE
+                    FROM " . $this->db->table("url_aliases") . " 
+                    WHERE query = 'collection_id=" . $collectionId . "'
+                        AND language_id = '" . $languageId . "'"
                 );
             }
         }
@@ -192,20 +210,29 @@ class ModelCatalogCollection extends Model
     }
 
     /**
-     * @param int $id
+     * @param int $collectionId
      *
      * @return bool
      * @throws AException
      */
-    public function delete($id)
+    public function delete(int $collectionId)
     {
-        if (!(int)$id) {
+        if (!$collectionId) {
             return false;
         }
-        $db = Registry::getInstance()->get('db');
-        $colTableName = $db->table('collections');
-        $query = 'DELETE FROM ' . $colTableName . ' WHERE id=' . (int)$id;
-        $db->query($query);
+
+        $this->db->query(
+            "DELETE FROM " . $this->db->table("collections_to_stores") . " 
+            WHERE collection_id = '" . $collectionId . "'"
+        );
+        $this->db->query(
+            "DELETE FROM " . $this->db->table("collection_descriptions") . " 
+            WHERE collection_id = '" . $collectionId . "'"
+        );
+        $this->db->query(
+            "DELETE FROM " . $this->db->table('collections') . " 
+            WHERE id=" . $collectionId
+        );
         return true;
     }
 
@@ -217,68 +244,53 @@ class ModelCatalogCollection extends Model
      */
     public function getCollections(array $data)
     {
-        $db = Registry::getInstance()->get('db');
-        $colTableName = $db->table('collections');
-
-        $query = 'SELECT SQL_CALC_FOUND_ROWS ' . $colTableName . '.id, 
-         ' . $colTableName . '.status, 
-         ' . $colTableName . '.name,
-         ' . $colTableName . '.description,
-         ' . $colTableName . '.store_id,
-         ' . $colTableName . '.date_added';
-
-        $query .= ' FROM ' . $colTableName;
+        $query = "SELECT " . $this->db->getSqlCalcTotalRows() . " c.* 
+                  FROM " . $this->db->table('collections') . " c 
+                  INNER JOIN " . $this->db->table('collections_to_stores') . " c2s 
+                       ON c.id = c2s.collection_id AND c2s.store_id = " . (int) $data['store_id'];
 
         $allowedSearchFields = [
-            'name'     => $colTableName . '.name',
-            'store_id' => $colTableName . '.store_id',
-            'status'   => $colTableName . '.status',
+            'name'     => 'c.name',
+            'store_id' => 'c.store_id',
+            'status'   => 'c.status',
+        ];
+
+        $allowedSortFields = [
+            'name'       => 'c.name',
+            'date_added' => 'c.date_added',
+            'status'     => 'c.status',
         ];
 
         $arWhere = [];
         if (isset($data['_search']) && $data['_search'] == 'true') {
             $filters = json_decode(htmlspecialchars_decode($data['filters']), true);
-            foreach ((array)$filters['rules'] as $filter) {
-                if (!$allowedSearchFields[$filter['field']]) {
+            foreach ((array) $filters['rules'] as $filter) {
+                $fldName = $filter['field'];
+                if (!$allowedSearchFields[$fldName]) {
                     continue;
                 }
-                $arWhere[] = $allowedSearchFields[$filter['field']] . ' LIKE \'%' . $db->escape($filter['data']) . '%\'';
+                $arWhere[] = $allowedSearchFields[$fldName] . " LIKE '%" . $this->db->escape($filter['data']) . "%'";
             }
         }
 
         if (isset($data['status'])) {
-            $arWhere[] = $allowedSearchFields['status'] . '=' . $data['status'];
+            $arWhere[] = $allowedSearchFields['status'] . " = " . (int) $data['status'];
         }
-
-        $arWhere[] = $allowedSearchFields['store_id'] . '=' . ($data['store_id'] ?: '0');
 
         if (!empty($arWhere)) {
-            $query .= ' WHERE ' . implode(' AND ', $arWhere);
+            $query .= " WHERE " . implode(' AND ', $arWhere);
         }
-
-        $allowedSortFields = [
-            'name'       => $colTableName . '.name',
-            'date_added' => $colTableName . '.date_added',
-            'status'     => $colTableName . '.status',
-        ];
 
         if (isset($data['sidx']) && isset($data['sord']) && $allowedSortFields[$data['sidx']]) {
-            $query .= ' ORDER BY ' . $allowedSortFields[$data['sidx']] . ' ' . $data['sord'];
+            $query .= " ORDER BY " . $allowedSortFields[$data['sidx']] . " " . $data['sord'];
         }
 
-        $limit = 20;
-        if (isset($data['rows']) && (int)$data['rows'] <= 50) {
-            $limit = (int)$data['rows'];
-        }
-
-        $page = isset($data['page']) ? (int)$data['page'] : 1;
+        $limit = min((int) $data['rows'] ? : 20, 50);
+        $page = (int) $data['page'] ? : 1;
         $start = $page * $limit - $limit;
-
         $query .= " LIMIT " . $start . "," . $limit;
-
-        $result = $db->query($query);
-
-        $total = $db->query('select found_rows() as total')->row['total'];
+        $result = $this->db->query($query);
+        $total = $this->db->getTotalNumRows();
 
         if ($result) {
             return [
@@ -297,421 +309,85 @@ class ModelCatalogCollection extends Model
     }
 
     /**
-     * @param $data
+     * @param int $collectionId
+     * @param int $languageId
+     * @param array $inData
      *
-     * @return bool|stdClass
+     * @return bool
      * @throws AException
      */
-    public function updateOrCreateDescription($data)
+    public function updateOrCreateDescription(int $collectionId, int $languageId, array $inData)
     {
-        if (!(int)$data['collection_id'] || !(int)$data['language_id']) {
+        if (!$collectionId || !$languageId) {
             return false;
         }
-        $db = Registry::getInstance()->get('db');
-        $colDesTableName = $db->table('collection_descriptions');
 
-        $exists = $db->query(
-            'SELECT id 
-            FROM ' . $colDesTableName . ' 
-            WHERE collection_id=' . (int)$data['collection_id'] .
-            ' AND language_id=' . (int)$data['language_id']
+        $exists = $this->db->query(
+            "SELECT * 
+            FROM " . $this->db->table('collection_descriptions') . " 
+            WHERE collection_id=" . $collectionId . " 
+                AND language_id=" . $languageId
         );
 
-        if ($exists->row['id']) {
+        if ($exists->num_rows) {
             $arUpdate = [];
-            foreach ($data as $key => $val) {
-                if (in_array($key, ['collection_id', 'language_id'])) {
+            foreach ($inData as $key => $val) {
+                if (!in_array($key, $this->data['description_column_list'])) {
                     continue;
                 }
-                $arUpdate[] = $key . '=\'' . $db->escape($val) . '\'';
+                $arUpdate[$key] = $val;
             }
-            if (!empty($arUpdate)) {
-                return $db->query(
-                    'UPDATE ' . $colDesTableName . ' 
-                    SET ' . implode(',', $arUpdate) . ' 
-                    WHERE id=' . $exists->row['id']
+            if ($arUpdate) {
+                $this->language->replaceDescriptions(
+                    'collection_descriptions',
+                    ['collection_id' => $collectionId],
+                    [
+                        $languageId => $arUpdate
+                    ]
                 );
+                return true;
             }
             return false;
         }
-
-        $keys = array_keys($data);
-        $values = array_values($data);
-
-        foreach ($values as &$value) {
-            $value = $db->escape($value);
-        }
-
-        return $db->query(
-            'INSERT INTO ' . $colDesTableName . ' (' . implode(',', $keys) . ') 
-            VALUES (\'' . implode('\',\'', $values) . '\')'
-        );
-    }
-
-    public function getById($id)
-    {
-        if (!(int)$id) {
-            return false;
-        }
-        $db = Registry::getInstance()->get('db');
-        $language = Registry::getInstance()->get('language');
-
-        $colTableName = $db->table('collections');
-        $colDesTableName = $db->table('collection_descriptions');
-
-        $arSelect = [
-            $colTableName . '.*',
-            $colDesTableName . '.title',
-            $colDesTableName . '.meta_keywords',
-            $colDesTableName . '.meta_description',
-        ];
-
-        $query = 'SELECT ' . implode(',', $arSelect) . ' 
-                    FROM ' . $colTableName;
-        $query .= ' LEFT JOIN ' . $colDesTableName . ' 
-                        ON ' . $colDesTableName . '.collection_id = ' . $colTableName . '.id 
-                            AND ' . $colDesTableName . '.language_id = ' . $language->getContentLanguageID();
-        $query .= ' WHERE ' . $colTableName . '.id=' . $id;
-
-        $result = $db->query($query);
-        if ($result->num_rows) {
-            $data = $result->row;
-            $data['conditions'] = json_decode($data['conditions'], true);
-            $seo_url = $db->query(
-                'SELECT *
-                FROM ' . $db->table('url_aliases') . " 
-                WHERE query = 'collection_id=" . (int)$id . "'
-                    AND language_id = '" . (int)$language->getContentLanguageID() . "'"
-            );
-            if ($seo_url->row) {
-                $data['keyword'] = $seo_url->row['keyword'];
-            }
-            return $data;
-        }
-        return false;
+        return true;
     }
 
     /**
-     * @return array | false
-     * @throws AException
-     */
-    public function getUniqueTags()
-    {
-        $db = Registry::getInstance()->get('db');
-        $tagsTableName = $db->table('product_tags');
-        $query = 'SELECT tag 
-                FROM ' . $tagsTableName . ' 
-                GROUP BY tag';
-        $result = $db->query($query);
-        if ($result->rows) {
-            return $result->rows;
-        }
-        return false;
-    }
-
-    /**
-     * @param array $conditions
-     * @param string $sort
-     * @param string $order
-     * @param int $start
-     * @param int $limit
      * @param int $collectionId
+     * @param int $languageId
      *
-     * @return array|false|mixed
+     * @return array|false
      * @throws AException
      */
-    public function getProducts(array $conditions, $sort, $order, $start, $limit, $collectionId)
+    public function getById(int $collectionId, int $languageId = 0)
     {
-        $store_id = (int)$this->config->get('current_store_id');
-        $language_id = (int)$this->config->get('storefront_language_id');
-        $cache_key = 'collection.listing.products_collection.' . (int)$collectionId
-            . '.store_' . $store_id
-            . '_sort_' . $sort
-            . '_order_' . $order
-            . '_start_' . $start
-            . '_limit_' . $limit
-            . '_lang_' . $language_id;
-        $result = $this->cache->pull($cache_key);
+        if (!$collectionId) {
+            return false;
+        }
 
-        if ($result === false) {
-            $result = [
-                'items' => [],
-                'total' => 0,
-                'start' => $start,
-                'limit' => $limit,
-            ];
+        $languageId = $languageId ? : $this->language->getContentLanguageID();
+        $sql = "SELECT c.*, cd.*, 
+                    (SELECT keyword
+                    FROM " . $this->db->table("url_aliases") . " 
+                    WHERE query = 'collection_id=" . $collectionId . "'
+                        AND language_id = '" . $languageId . "') as keyword 
+                  FROM " . $this->db->table('collections') . " c 
+                  LEFT JOIN " . $this->db->table('collection_descriptions') . " cd 
+                      ON (cd.collection_id = c.id AND cd.language_id = " . $languageId . ")
+                  WHERE c.id=" . $collectionId;
 
-            if (!is_array($conditions['relation']) || !is_array($conditions['conditions'])) {
-                return $result;
+        $result = $this->db->query($sql);
+        if ($result->num_rows) {
+            $output = $result->row;
+            $output['conditions'] = json_decode($output['conditions'], true);
+            if($output){
+                $sql = "SELECT store_id 
+                        FROM ".$this->db->table('collections_to_stores') ." 
+                        WHERE collection_id=".$collectionId;
+                $output['stores'] = array_column($this->db->query($sql)->rows,'store_id');
             }
-
-            $relation = $conditions['relation'];
-            $conditions = $conditions['conditions'];
-
-            $db = Registry::getInstance()->get('db');
-            $productsTable = $db->table('products');
-            $p2sTable = $db->table('products_to_stores');
-            $p2cTable = $db->table('products_to_categories');
-            $productsTagsTable = $db->table('product_tags');
-            $pdTable = $db->table('product_descriptions');
-
-            $arSelect = [
-                'SQL_CALC_FOUND_ROWS ' . $productsTable . '.*',
-                $this->sqlFinalPriceString(),
-                $this->sqlAvgRatingString(),
-                $this->sqlReviewCountString(),
-                $pdTable . '.name',
-                $pdTable . '.blurb',
-            ];
-
-            $arWhere = [];
-            $arJoins = [
-                'INNER JOIN ' . $p2sTable . ' 
-                    ON ' . $p2sTable . '.product_id=' . $productsTable . '.product_id 
-                        AND ' . $p2sTable . '.store_id=' . $this->config->get('current_store_id'),
-
-                'LEFT JOIN ' . $pdTable . ' 
-                    ON ' . $pdTable . '.product_id=' . $productsTable . '.product_id 
-                        AND language_id=' . (int)$this->language->getContentLanguageID(),
-            ];
-
-            foreach ($conditions as $k => $condition) {
-                //Brands filter
-                if ($condition['object'] === 'brands'
-                    && is_array($condition['value'])
-                    && !empty($condition['value'])
-                ) {
-                    $arWhere[] = ' manufacturer_id '
-                        . $this->gerInOperator($condition['operator'], $relation['value'])
-                        . ' (' . implode(',', $condition['value']) . ')';
-                }
-                //Category filter
-                if ($condition['object'] === 'categories'
-                    && is_array($condition['value'])
-                    && !empty($condition['value'])
-                ) {
-                    $arSelect[] = 'cat' . $k . '.category_id';
-                    $arJoins[] = 'LEFT JOIN ' . $p2cTable . ' cat' . $k
-                        . ' ON cat' . $k . '.product_id=' . $productsTable . '.product_id';
-                    $arWhere[] = ' cat' . $k . '.category_id ' . $this->gerInOperator($condition['operator'], $relation['value']) .
-                        ' (' . implode(',', $condition['value']) . ')';
-                }
-                //Products filter
-                if ($condition['object'] === 'products' && is_array($condition['value'])
-                    && !empty($condition['value'])) {
-                    $arWhere[] = $productsTable . '.product_id '
-                        . $this->gerInOperator($condition['operator'], $relation['value'])
-                        . ' (' . implode(',', $condition['value']) . ')';
-                }
-                //Product price filter
-                if ($condition['object'] === 'product_price' && (int)$condition['value'] > 0) {
-                    $arWhere[] = 'price ' . $this->gerEqualOperator(
-                            $condition['operator'],
-                            $relation['value']
-                        )
-                        . $condition['value'];
-                }
-                //Tags filter
-                if ($condition['object'] === 'tags' && is_array($condition['value']) && !empty($condition['value'])) {
-                    $arSelect[] = ' tag' . $k . '.tag';
-                    $arJoins[] = 'LEFT JOIN ' . $productsTagsTable . ' tag' . $k . '
-                                    ON tag' . $k . '.product_id=' . $productsTable . '.product_id' .
-                        ' AND tag' . $k . '.language_id=' . (int)$this->language->getContentLanguageID();
-                    foreach ($condition['value'] as &$value) {
-                        $value = "'" . $value . "'";
-                    }
-                    $arWhere[] = 'tag' . $k . '.tag ' . $this->gerInOperator($condition['operator'], $relation['value']) .
-                        ' (' . implode(',', $condition['value']) . ')';
-                }
-            }
-
-            $query = 'SELECT ' . implode(',', $arSelect) . ' FROM ' . $productsTable;
-            foreach ($arJoins as $arJoin) {
-                $query .= ' ' . $arJoin;
-            }
-
-            if (empty($arWhere)) {
-                return $result;
-            }
-
-            $query .= ' WHERE (' . implode(($relation['if'] == 'any') ? ' OR ' : ' AND ', $arWhere) . ')';
-            $query .= ' AND ' . $productsTable . '.status=1';
-
-            $query .= ' GROUP BY ' . $productsTable . '.product_id';
-
-            $allowedSort = [
-                'pd.name'       => 'LCASE(' . $pdTable . '.name)',
-                'p.sort_order'  => $productsTable . '.sort_order',
-                'p.price'       => 'final_price',
-                'special'       => 'final_price',
-                'rating'        => 'rating',
-                'date_modified' => $productsTable . '.date_modified',
-                'review'        => 'review',
-            ];
-
-            if ($allowedSort[$sort]) {
-                $query .= ' ORDER BY ' . $allowedSort[$sort] . ' ' . ($order ?: 'ASC');
-            } else {
-                $query .= ' ORDER BY ' . $productsTable . '.date_modified ' . ($order ?: 'ASC');
-            }
-
-            if (isset($start) && $limit) {
-                $query .= ' LIMIT ' . $start . ',' . $limit;
-            }
-
-            $products = $db->query($query);
-            $total = $db->query('select found_rows() as total')->row['total'];
-
-            if ($products) {
-                $result['items'] = $products->rows;
-                $result['total'] = $total;
-            }
-
-            $this->cache->push($cache_key, $result);
+            return $output;
         }
-
-        return $result;
+        return [];
     }
-
-    /**
-     * @return string
-     */
-    protected function sqlFinalPriceString()
-    {
-        //special prices
-        if (is_object($this->customer) && $this->customer->isLogged()) {
-            $customer_group_id = (int)$this->customer->getCustomerGroupId();
-        } else {
-            $customer_group_id = (int)$this->config->get('config_customer_group_id');
-        }
-
-        $p2sp = $this->db->table('product_specials');
-        $p = $this->db->table('products');
-
-        $sql = ' ( SELECT ' . $p2sp . '.price
-                    FROM ' . $p2sp .
-            ' WHERE ' . $p2sp . '.product_id = ' . $p . '.product_id' .
-            ' AND ' . $p2sp . '.customer_group_id = \'' . $customer_group_id . '\'' .
-            ' AND ((' . $p2sp . '.date_start = \'0000-00-00\' OR ' . $p2sp . '.date_start < NOW())' .
-            ' AND (' . $p2sp . '.date_end = \'0000-00-00\' OR ' . $p2sp . '.date_end > NOW()))' .
-            ' ORDER BY ' . $p2sp . '.priority ASC, ' . $p2sp . '.price ASC LIMIT 1) ';
-        $sql = 'COALESCE( ' . $sql . ', ' . $p . '.price) as final_price ';
-
-        return $sql;
-    }
-
-    /**
-     * @return string
-     */
-    protected function sqlAvgRatingString()
-    {
-        $rw = $this->db->table('reviews');
-        $p = $this->db->table('products');
-
-        $sql = ' ( SELECT FLOOR(AVG(' . $rw . '.rating))
-                         FROM ' . $this->db->table('reviews') . ' ' . $rw . '
-                         WHERE ' . $p . '.product_id = ' . $rw . '.product_id AND status = 1
-                         GROUP BY ' . $rw . '.product_id 
-                 ) AS rating ';
-        return $sql;
-    }
-
-    /**
-     * @return string
-     */
-    protected function sqlReviewCountString()
-    {
-        $rw = $this->db->table('reviews');
-        $p = $this->db->table('products');
-
-        $sql = ' ( SELECT COUNT(' . $rw . '.review_id)
-                         FROM ' . $this->db->table('reviews') . ' ' . $rw . '
-                         WHERE ' . $p . '.product_id = ' . $rw . '.product_id AND status = 1
-                         GROUP BY ' . $rw . '.product_id 
-                 ) AS review ';
-        return $sql;
-    }
-
-    /**
-     * @param $operator
-     * @param $invert
-     *
-     * @return string
-     */
-    private function gerEqualOperator($operator, $invert)
-    {
-        if (($operator == 'eq' && $invert == 'true') || ($operator == 'neq' && $invert == 'false')) {
-            return '=';
-        }
-        if (($operator == 'eq' && $invert == 'false') || ($operator == 'neq' && $invert == 'true')) {
-            return '<>';
-        }
-        if ($operator == 'eqlt' && $invert == 'true') {
-            return '<=';
-        }
-        if ($operator == 'eqlt' && $invert == 'false') {
-            return '>';
-        }
-        if ($operator == 'eqgt' && $invert == 'true') {
-            return '>=';
-        }
-        if ($operator == 'eqgt' && $invert == 'false') {
-            return '<';
-        }
-        if ($operator == 'lt' && $invert == 'true') {
-            return '<';
-        }
-        if ($operator == 'lt' && $invert == 'false') {
-            return '>=';
-        }
-        if ($operator == 'gt' && $invert == 'true') {
-            return '>';
-        }
-        if ($operator == 'gt' && $invert == 'false') {
-            return '<=';
-        }
-        return '=';
-    }
-
-    /**
-     * @param $operator
-     * @param $invert
-     *
-     * @return string
-     */
-    private function gerInOperator($operator, $invert)
-    {
-        if (($operator == 'in' && $invert == 'true') || ($operator == 'notin' && $invert == 'false')) {
-            return 'IN';
-        }
-        if (($operator == 'in' && $invert == 'false') || ($operator == 'notin' && $invert == 'true')) {
-            return 'NOT IN';
-        }
-        return 'IN';
-    }
-
-    /**
-     * @param $collection_id
-     *
-     * @return mixed
-     * @throws AException
-     */
-    public function getCollectionStoresInfo($collection_id)
-    {
-        $query = $this->db->query(
-            "SELECT c.*,
-                    s.name as store_name,
-                    ss.`value` as store_url,
-                    sss.`value` as store_ssl_url
-            FROM " . $this->db->table("collections") . " c
-            LEFT JOIN " . $this->db->table("stores") . " s ON s.store_id = c.store_id
-            LEFT JOIN " . $this->db->table("settings") . " ss
-                ON (ss.store_id = c.store_id AND ss.`key`='config_url')
-            LEFT JOIN " . $this->db->table("settings") . " sss
-                ON (sss.store_id = c.store_id AND sss.`key`='config_ssl_url')
-            WHERE c.id = '" . (int)$collection_id . "'"
-        );
-        return $query->rows;
-    }
-
 }

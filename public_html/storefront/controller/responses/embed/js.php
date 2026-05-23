@@ -506,17 +506,19 @@ class ControllerResponsesEmbedJS extends AController
             'r/product/collection',
             '&collection_id='.$collection_id
         );
-
+        /** @var ModelCatalogProduct $pMdl */
+        $pMdl = $this->loadModel('catalog/product');
         $collectionProducts = [];
         if ($collection['conditions']) {
             $sortOrder = $this->config->get('config_product_default_sort_order');
             list ($sort, $order) = explode('-', $sortOrder);
-            $collectionProducts = $this->model_catalog_collection->getProducts(
+
+            $collectionProducts = $pMdl->getCollectionProducts(
                 $collection['conditions'],
                 $sort ? : 'date_modified',
                 $order ? : 'DESC',
-                $this->request->get['start'] ?? 0,
-                $this->request->get['limit'] ?? 1000,
+                (int)$this->request->get['start'],
+                (int)$this->request->get['limit'] ?: 1000,
                 $collection_id
             );
         }
@@ -524,10 +526,9 @@ class ControllerResponsesEmbedJS extends AController
 
         if (!empty($collectionProducts['items'])) {
             $this->loadModel('catalog/review');
-            $this->loadModel('catalog/product');
 
             $productIds = array_column((array) $collectionProducts['items'], 'product_id');
-            $productsInfo = $this->model_catalog_product->getProductsAllInfo($productIds);
+            $productsInfo = $pMdl->getProductsAllInfo($productIds);
             $products = $thumbnails = $thumbnail = [];
             if ($this->request->get['product_image']) {
                 $thumbnails = $productIds
@@ -540,7 +541,7 @@ class ControllerResponsesEmbedJS extends AController
                     : $productIds;
             }
 
-            $stockInfo = $this->model_catalog_product->getProductsStockInfo($productIds);
+            $stockInfo = $pMdl->getProductsStockInfo($productIds);
             foreach ($collectionProducts['items'] as $result) {
                 if ($thumbnails) {
                     $thumbnail = $thumbnails[$result['product_id']];
@@ -586,8 +587,8 @@ class ControllerResponsesEmbedJS extends AController
                     : $result['stock_checkout'];
                 if ($stockInfo[$result['product_id']]['subtract']) {
                     $track_stock = true;
-                    $total_quantity = $this->model_catalog_product->hasAnyStock($result['product_id']);
-                    //we have stock or out of stock checkout is allowed
+                    $total_quantity = $pMdl->hasAnyStock($result['product_id']);
+                    //we have stock or out-of-stock checkout is allowed
                     if ($total_quantity > 0 || $stock_checkout) {
                         $in_stock = true;
                     }
@@ -617,7 +618,7 @@ class ControllerResponsesEmbedJS extends AController
                 ];
                 if ($this->config->get('display_reviews')) {
                     $product['rating'] = $rating;
-                    $product['stars'] = sprintf($this->language->get('text_stars'), $rating);
+                    $product['stars'] = $this->language->getAndReplace('text_stars', replaces: $rating);
                 }
                 $products[] = $product;
             }

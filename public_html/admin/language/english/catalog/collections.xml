@@ -29,6 +29,10 @@
 		<value><![CDATA[Internal description:]]></value>
 	</definition>
 	<definition>
+		<key>save_error</key>
+		<value><![CDATA[Error: Something went wrong. Please check System->Logs->Error log]]></value>
+	</definition>
+	<definition>
 		<key>save_error_name</key>
 		<value><![CDATA[Collection Name is required.]]></value>
 	</definition>
@@ -158,7 +162,7 @@
 	</definition>
 	<definition>
 		<key>save_complete</key>
-		<value><![CDATA[Save Complete]]></value>
+		<value><![CDATA[Collection has been saved successfully.]]></value>
 	</definition>
 	<definition>
 		<key>entry_meta_keywords</key>

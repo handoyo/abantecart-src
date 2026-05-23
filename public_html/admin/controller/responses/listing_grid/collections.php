@@ -33,11 +33,12 @@ class ControllerResponsesListingGridCollections extends AController
         //init controller data
         $this->extensions->hk_InitData($this, __FUNCTION__);
 
-        $this->loadModel('catalog/collection');
+        /** @var ModelCatalogCollection $mdl */
+        $mdl = $this->loadModel('catalog/collection');
 
         $data = $this->request->post;
         $data['store_id'] = (int)$this->config->get('current_store_id');
-        $result = $this->model_catalog_collection->getCollections($data);
+        $result = $mdl->getCollections($data);
         $response = new stdClass();
         $response->page = $result['page'];
         $response->total = ceil($result['total'] / $result['limit']);
@@ -75,7 +76,8 @@ class ControllerResponsesListingGridCollections extends AController
         //init controller data
         $this->extensions->hk_InitData($this, __FUNCTION__);
 
-        $this->loadModel('catalog/collection');
+        /** @var ModelCatalogCollection $mdl */
+        $mdl = $this->loadModel('catalog/collection');
         if (!$this->user->canModify('listing_grid/collections')) {
             $error = new AError('');
             $error->toJSONResponse(
@@ -88,15 +90,15 @@ class ControllerResponsesListingGridCollections extends AController
                 ]
             );
         }
-        $collectionId = $this->request->get['id'];
+        $collectionId = (int)$this->request->get['id'];
         if ($this->request->is_POST()) {
             $post = $this->request->post;
             if (is_array($post['status'])) {
                 foreach ($post['status'] as $key => $value) {
-                    $this->model_catalog_collection->update($key, ['status' => (int)$value]);
+                    $mdl->update((int)$key, ['status' => (int)$value]);
                 }
             } elseif ($collectionId && $this->validate($post)) {
-                $this->model_catalog_collection->update($collectionId, $post);
+                $mdl->update($collectionId, $post);
             } else {
                 $error = new AError('');
                 $error->toJSONResponse('VALIDATION_ERROR_406', ['error_text' => $this->error]);
@@ -119,7 +121,7 @@ class ControllerResponsesListingGridCollections extends AController
         }
 
         if ($this->html->isSEOkeywordExists(
-            'collection_id=' . $this->request->get['id'],
+            'collection_id=' . (int)$this->request->get['id'],
             $this->request->post['keyword']
         )
         ) {
@@ -134,7 +136,8 @@ class ControllerResponsesListingGridCollections extends AController
         //init controller data
         $this->extensions->hk_InitData($this, __FUNCTION__);
 
-        $this->loadModel('catalog/collection');
+        /** @var ModelCatalogCollection $mdl */
+        $mdl = $this->loadModel('catalog/collection');
 
         if ($this->request->is_POST()) {
             $post = $this->request->post;
@@ -143,8 +146,8 @@ class ControllerResponsesListingGridCollections extends AController
                     return;
                 }
                 foreach ($post['status'] as $key => $value) {
-                    $this->model_catalog_collection->update(
-                        $key,
+                    $mdl->update(
+                        (int)$key,
                         [
                             'status' => (int)$value,
                         ]
@@ -153,9 +156,9 @@ class ControllerResponsesListingGridCollections extends AController
             }
 
             if ($post['oper'] === 'del' && isset($post['id'])) {
-                $ids = array_unique(explode(',', $post['id']));
+                $ids = filterIntegerIdList(explode(',', $post['id']));
                 foreach ($ids as $id) {
-                    $this->model_catalog_collection->delete($id);
+                    $mdl->delete( $id );
                 }
             }
         }
@@ -186,7 +189,7 @@ class ControllerResponsesListingGridCollections extends AController
                 'form_name' => 'collectionsFrm',
                 'update'    => $this->html->getSecureURL(
                     'listing_grid/collections/update_field',
-                    '&id=' . $this->request->get['id']
+                    '&id=' . (int)$this->request->get['id']
                 ),
             ]
         );
@@ -218,11 +221,12 @@ class ControllerResponsesListingGridCollections extends AController
     protected function getFieldsForProducts($value = '')
     {
         $listing_data = [];
-        if (is_array($value) && is_array($value['value']) && ($prodIds = array_filter($value['value'])) ) {
-            $this->loadModel('catalog/product');
+        if (is_array($value) && is_array($value['value']) && ($prodIds = filterIntegerIdList($value['value'])) ) {
+            /** @var ModelCatalogProduct $pMdl */
+            $pMdl = $this->loadModel('catalog/product');
             $filter = ['subsql_filter' => 'p.product_id in (' . implode(',', $prodIds) . ')'];
 
-            $results = $this->model_catalog_product->getProducts($filter);
+            $results = $pMdl->getProducts($filter);
             if ($results) {
                 $resource = new AResource('image');
                 foreach ($results as $r) {
@@ -317,8 +321,10 @@ class ControllerResponsesListingGridCollections extends AController
                 'value'   => !$value ? '' : $value['operator'],
             ]
         );
-        $this->loadModel('catalog/category');
-        $results = $this->model_catalog_category->getCategories(
+
+        /** @var ModelCatalogCategory $cMdl */
+        $cMdl = $this->loadModel('catalog/category');
+        $results = $cMdl->getCategories(
             ROOT_CATEGORY_ID,
             $this->config->get('current_store_id')
         );
@@ -352,8 +358,10 @@ class ControllerResponsesListingGridCollections extends AController
                 'value'   => !$value ? '' : $value['operator'],
             ]
         );
-        $this->loadModel('catalog/manufacturer');
-        $results = $this->model_catalog_manufacturer->getManufacturers();
+
+        /** @var ModelCatalogManufacturer $mMdl */
+        $mMdl = $this->loadModel('catalog/manufacturer');
+        $results = $mMdl->getManufacturers();
         $manufacturers = array_column($results, 'name', 'manufacturer_id');
 
         $response['fields'] .= $this->form->getFieldHtml(
@@ -380,17 +388,18 @@ class ControllerResponsesListingGridCollections extends AController
                     'in'    => $this->language->get('text_in'),
                     'notin' => $this->language->get('text_not_in'),
                 ],
-                'value'   => !$value ? '' : $value['operator'],
+                'value'   => $value['operator']?:''
             ]
         );
-        $this->loadModel('catalog/collection');
-        $results = $this->model_catalog_collection->getUniqueTags();
+        /** @var ModelCatalogProduct $pMdl */
+        $pMdl = $this->loadModel('catalog/product');
+        $results = $pMdl->getUniqueTags();
         $tags = array_column($results, 'tag', 'tag');
         $response['fields'] .= $this->form->getFieldHtml(
             [
                 'type'        => 'checkboxgroup',
                 'name'        => 'conditions[conditions][' . $this->request->post['idx'] . '][value][]',
-                'value'       => !$value ? '' : $value['value'],
+                'value'       => $value['value']?:'',
                 'options'     => $tags,
                 'style'       => 'chosen',
                 'placeholder' => $this->language->get('text_select_tag'),
@@ -398,5 +407,4 @@ class ControllerResponsesListingGridCollections extends AController
         );
         return $response;
     }
-
 }

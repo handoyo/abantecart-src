@@ -542,15 +542,15 @@ class ControllerPagesCatalogProduct extends AController
         $this->loadModel('catalog/category');
         $this->data['categories'] = [];
 
-        $product_stores = array_column($this->model_setting_store->getStores(), 'store_id');
+        /** @var ModelSettingStore $mdl */
+        $mdl = $this->loadModel('setting/store');
+        $product_stores = array_column($mdl->getStores(), 'store_id');
         $results = $this->model_catalog_category->getCategories(ROOT_CATEGORY_ID, $product_stores);
         foreach ($results as $r) {
             $name = $r['name'] . (count($product_stores) > 1 ? ' (' . $r['store_name'] . ')' : '');
             $this->data['categories'][$r['category_id']] = $name;
         }
 
-        /** @var ModelSettingStore $mdl */
-        $mdl = $this->loadModel('setting/store');
         $this->data['stores'] =
             [0 => $this->language->get('text_default')]
             + array_column($mdl->getStores(), 'name', 'store_id');

@@ -3165,4 +3165,15 @@ class ModelCatalogProduct extends Model
         }
         return $output;
     }
+
+    /**
+     * @return array
+     * @throws AException
+     */
+    public function getUniqueTags()
+    {
+        $query = "SELECT DISTINCT tag FROM " . $this->db->table('product_tags');
+        $result = $this->db->query($query);
+        return $result->rows;
+    }
 }

@@ -12665,8 +12665,8 @@ CREATE TABLE `ac_collections` (
   `name` varchar(255) COLLATE utf8_bin DEFAULT NULL,
   `description` text COLLATE utf8_bin,
   `conditions` text COLLATE utf8_bin,
-  `store_id` int(11) NOT NULL DEFAULT '0',
   `date_added` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `date_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDb DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -12678,6 +12678,9 @@ CREATE TABLE `ac_collection_descriptions` (
   `title` varchar(255) COLLATE utf8_bin DEFAULT NULL,
   `meta_keywords` text COLLATE utf8_bin,
   `meta_description` text COLLATE utf8_bin,
+  `content` longtext NOT NULL COMMENT 'translatable',
+  `date_added` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `date_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `collection_language_idx` (`collection_id`,`language_id`)
 ) ENGINE=InnoDb DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -13068,3 +13071,14 @@ create index `ac_shopping_sessions_int_idx`
     on `ac_shopping_sessions` (`customer_id` desc, `order_id` desc);
 create unique index `ac_shopping_sessions_text_idx`
     on `ac_shopping_sessions` (`type`, `key`);
+
+
+--
+-- DDL for table `content_to_store`
+--
+DROP TABLE IF EXISTS `ac_collections_to_stores`;
+CREATE TABLE `ac_collections_to_stores` (
+     `collection_id` int(11) NOT NULL,
+     `store_id` int(11) NOT NULL,
+     PRIMARY KEY (`collection_id`,`store_id`)
+) ENGINE=InnoDb DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

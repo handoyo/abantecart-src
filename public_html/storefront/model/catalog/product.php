@@ -24,6 +24,7 @@
 class ModelCatalogProduct extends Model
 {
     protected $customer_group_id;
+
     public function __construct($registry)
     {
         parent::__construct($registry);
@@ -300,10 +301,12 @@ class ModelCatalogProduct extends Model
         $store_id = (int) $this->config->get('config_store_id');
         $language_id = (int) $this->config->get('storefront_language_id');
         $cache_key = 'product.listing.products_category.'
-            . md5(var_export(func_get_args(), true)
-            . $this->customer_group_id
-            . $store_id
-            . $language_id);
+            . md5(
+                var_export(func_get_args(), true)
+                . $this->customer_group_id
+                . $store_id
+                . $language_id
+            );
         $cache = $this->cache->pull($cache_key);
         if ($cache === false) {
             $sql = "SELECT DISTINCT " . $this->db->getSqlCalcTotalRows() . " p.*, 
@@ -665,8 +668,10 @@ class ModelCatalogProduct extends Model
         $cacheKey = 'product.search.results'
             . $this->customer_group_id
             . (int) $this->config->get('storefront_language_id')
-            . md5(var_export($data, true)
-            . var_export($categoryIds, true));
+            . md5(
+                var_export($data, true)
+                . var_export($categoryIds, true)
+            );
         $output = $this->cache->pull($cacheKey);
         if ($output !== false) {
             return $output;
@@ -1007,7 +1012,7 @@ class ModelCatalogProduct extends Model
 
                 if ($products) {
                     $sql = "SELECT pd.*, ss.name AS stock, p.*,"
-                                  . $this->_sql_final_price_string() . ",
+                        . $this->_sql_final_price_string() . ",
                                 " . $this->_sql_avg_rating_string() . ",
                                 " . $this->_sql_review_count_string() . "
                             FROM " . $this->db->table("products") . " p
@@ -2021,7 +2026,7 @@ class ModelCatalogProduct extends Model
 
         $languageId = (int) $this->config->get('storefront_language_id');
         $storeId = (int) $this->config->get('config_store_id');
-        $customerGroupId = (int) $data['customer_group_id'] ?: $this->customer_group_id;
+        $customerGroupId = (int) $data['customer_group_id'] ? : $this->customer_group_id;
 
         $cache_key = 'product.specials.' . $customerGroupId;
         $cache_key .= $this->cache->paramsToString($data);
@@ -2110,5 +2115,216 @@ class ModelCatalogProduct extends Model
 
         $this->cache->push($cache_key, $output);
         return $output;
+    }
+
+    /**
+     * @param array $conditions
+     * @param $sort
+     * @param $order
+     * @param $start
+     * @param $limit
+     * @param $collectionId
+     *
+     * @return array
+     * @throws AException
+     */
+    public function getCollectionProducts(array $conditions, $sort, $order, $start, $limit, $collectionId)
+    {
+        $storeId = (int) $this->config->get('config_store_id');
+        $languageId = (int) $this->config->get('storefront_language_id');
+        $cache_key = 'collection.listing.products_collection.' . (int) $collectionId
+            . '.store_' . $storeId . '_lang_' . $languageId
+            . '_' . md5(var_export(func_get_args(), true));
+        $result = $this->cache->pull($cache_key);
+        if ($result === false) {
+            $result = [
+                'items' => [],
+                'total' => 0,
+                'start' => $start,
+                'limit' => $limit,
+            ];
+
+            if (!is_array($conditions['relation']) || !is_array($conditions['conditions'])) {
+                return $result;
+            }
+            $relation = $conditions['relation'];
+            $conditions = $conditions['conditions'];
+            $arSelect = [
+                $this->db->getSqlCalcTotalRows() . ' p.*',
+                $this->_sql_final_price_string(),
+                $this->_sql_avg_rating_string(),
+                $this->_sql_review_count_string(),
+                'pd.*',
+            ];
+
+            $arWhere = [];
+            $arJoins = [
+                "INNER JOIN " . $this->db->table('products_to_stores') . " pts 
+                    ON (pts.product_id = p.product_id AND pts.store_id=" . $storeId . ")",
+                "LEFT JOIN " . $this->db->table('product_descriptions') . " pd 
+                    ON (pd.product_id = p.product_id AND pd.language_id=" . $languageId . ")",
+            ];
+            foreach ($conditions as $k => $condition) {
+                if (is_array($condition['value']) && $condition['value']) {
+                    //Brands filter
+                    if ($condition['object'] === 'brands') {
+                        $arWhere[] = "manufacturer_id "
+                            . $this->gerInOperator($condition['operator'], $relation['value'])
+                            . " (" . implode(',', $condition['value']) . ")";
+                    }
+                    //Category filter
+                    if ($condition['object'] === 'categories') {
+                        $alias = " p2c" . $k;
+                        $arSelect[] = $alias . ".category_id";
+                        $arJoins[] = "LEFT JOIN " . $this->db->table('products_to_categories') . " " . $alias . " 
+                                      ON " . $alias . ".product_id = p.product_id";
+                        /** @var ModelCatalogCategory $mdl */
+                        $mdl = $this->load->model('catalog/category');
+                        $allCategoryChildren = $condition['value'];
+                        foreach ($condition['value'] as $cId) {
+                            $allCategoryChildren = array_merge($allCategoryChildren, $mdl->getChildrenIDs((int) $cId));
+                        }
+                        $allCategoryChildren = filterIntegerIdList($allCategoryChildren);
+                        $arWhere[] = $alias . ".category_id "
+                            . $this->gerInOperator($condition['operator'], $relation['value'])
+                            . " (" . implode(',', $allCategoryChildren) . ")";
+                    }
+                    //Product filter
+                    if ($condition['object'] === 'products') {
+                        $arWhere[] = "p.product_id "
+                            . $this->gerInOperator($condition['operator'], $relation['value'])
+                            . " (" . implode(',', filterIntegerIdList($condition['value'])) . ")";
+                    }
+
+                    //Tags filter
+                    if ($condition['object'] === 'tags') {
+                        $alias = ' pt' . $k;
+                        $arSelect[] = $alias . '.tag';
+                        $arJoins[] = "LEFT JOIN " . $this->db->table('product_tags') . $alias . "
+                                     ON (" . $alias . ".product_id = p.product_id
+                                        AND " . $alias . ".language_id =" . $languageId . ')';
+                        foreach ($condition['value'] as &$value) {
+                            $value = "'" . $value . "'";
+                        }
+                        $arWhere[] = $alias . ".tag "
+                            . $this->gerInOperator($condition['operator'], $relation['value'])
+                            . " (" . implode(',', $condition['value']) . ")";
+                    }
+                }
+                //Product price filter
+                if ($condition['object'] === 'product_price' && (int) $condition['value'] > 0) {
+                    $arWhere[] = "price "
+                        . $this->gerEqualOperator($condition['operator'], $relation['value'])
+                        . $condition['value'];
+                }
+            }
+
+            $query = "SELECT " . implode(',', $arSelect)
+                . " FROM " . $this->db->table('products') . " p ";
+            foreach ($arJoins as $arJoin) {
+                $query .= ' ' . $arJoin;
+            }
+
+            if (empty($arWhere)) {
+                return $result;
+            }
+
+            $query .= " WHERE " . implode(($relation['if'] == 'any') ? ' OR ' : ' AND ', $arWhere);
+            if (IS_ADMIN !== true) {
+                $query .= " AND p.status = 1 AND p.date_available <= NOW() ";
+            }
+
+            $allowedSort = [
+                'pd.name'       => 'LCASE(pd.name)',
+                'name'          => 'LCASE(pd.name)',
+                'p.sort_order'  => 'p.sort_order',
+                'sort_order'    => 'p.sort_order',
+                'p.price'       => 'final_price',
+                'price'         => 'final_price',
+                'special'       => 'final_price',
+                'rating'        => 'rating',
+                'date_modified' => 'p.date_modified',
+                'review'        => 'review',
+            ];
+
+            if ($allowedSort[$sort]) {
+                $query .= " ORDER BY " . $allowedSort[$sort] . " " . ($order ? : 'ASC');
+            } else {
+                $query .= " ORDER BY p.date_modified " . ($order ? : 'ASC');
+            }
+
+            if (isset($start) && $limit) {
+                $query .= " LIMIT " . $start . "," . $limit;
+            }
+
+            $products = $this->db->query($query);
+            $total = $this->db->getTotalNumRows();
+
+            if ($products) {
+                $result['items'] = $products->rows;
+                $result['total'] = $total;
+            }
+
+            $this->cache->push($cache_key, $result);
+        }
+        return $result;
+    }
+
+    /**
+     * @param string $operator
+     * @param string $invert
+     *
+     * @return string
+     */
+    protected function gerEqualOperator($operator, $invert)
+    {
+        if (($operator == 'eq' && $invert == 'true') || ($operator == 'neq' && $invert == 'false')) {
+            return '=';
+        }
+        if (($operator == 'eq' && $invert == 'false') || ($operator == 'neq' && $invert == 'true')) {
+            return '<>';
+        }
+        if ($operator == 'eqlt' && $invert == 'true') {
+            return '<=';
+        }
+        if ($operator == 'eqlt' && $invert == 'false') {
+            return '>';
+        }
+        if ($operator == 'eqgt' && $invert == 'true') {
+            return '>=';
+        }
+        if ($operator == 'eqgt' && $invert == 'false') {
+            return '<';
+        }
+        if ($operator == 'lt' && $invert == 'true') {
+            return '<';
+        }
+        if ($operator == 'lt' && $invert == 'false') {
+            return '>=';
+        }
+        if ($operator == 'gt' && $invert == 'true') {
+            return '>';
+        }
+        if ($operator == 'gt' && $invert == 'false') {
+            return '<=';
+        }
+        return '=';
+    }
+
+    /**
+     * @param $operator
+     * @param $invert
+     *
+     * @return string
+     */
+    protected function gerInOperator($operator, $invert)
+    {
+        if (($operator == 'in' && $invert == 'true') || ($operator == 'notin' && $invert == 'false')) {
+            return 'IN';
+        }
+        if (($operator == 'in' && $invert == 'false') || ($operator == 'notin' && $invert == 'true')) {
+            return 'NOT IN';
+        }
+        return 'IN';
     }
 }

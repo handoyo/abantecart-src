@@ -19,7 +19,6 @@
  */
 
 /** @noinspection PhpUnused */
-
 /** @noinspection PhpMultipleClassDeclarationsInspection */
 class ControllerPagesProductCollection extends AController
 {
@@ -32,7 +31,7 @@ class ControllerPagesProductCollection extends AController
 
     public function main()
     {
-        $request = $this->request->get;
+        $get =& $this->request->get;
 
         $this->data['cart_rt'] = $this->config->get('embed_mode')
             ? 'r/checkout/cart/embed'
@@ -52,7 +51,8 @@ class ControllerPagesProductCollection extends AController
             ]
         );
 
-        $this->loadModel('catalog/collection');
+        /** @var ModelCatalogCollection $mdl */
+        $mdl = $this->loadModel('catalog/collection');
         $this->loadModel('tool/seo_url');
 
         $httpQuery = $this->prepareProductSortingParameters();
@@ -60,8 +60,8 @@ class ControllerPagesProductCollection extends AController
         unset($httpQuery['raw_sort']);
         $httpQuery = array_merge($httpQuery, (array) $this->data['additional_filters']);
 
-        $collectionId = (int) $request['collection_id'];
-        $collectionInfo = $collectionId ? $this->model_catalog_collection->getById($collectionId) : [];
+        $collectionId = (int) $get['collection_id'];
+        $collectionInfo = $collectionId ? $mdl->getById($collectionId) : [];
         if (!$collectionInfo) {
             $this->notFound();
             return;
@@ -81,6 +81,7 @@ class ControllerPagesProductCollection extends AController
         );
 
         $this->data['heading_title'] = $collectionInfo['title'];
+        $this->data['content'] = html_entity_decode($collectionInfo['content']);
         $this->data['text_sort'] = $this->language->get('text_sort');
 
         /** @var ModelCatalogProduct $pMdl */
@@ -89,7 +90,7 @@ class ControllerPagesProductCollection extends AController
         $start = ($page - 1) * $limit;
         $collectionProducts = [];
         if ($collectionInfo['conditions']) {
-            $collectionProducts = $this->model_catalog_collection->getProducts(
+            $collectionProducts = $pMdl->getCollectionProducts(
                 $collectionInfo['conditions'],
                 $sort,
                 $order,
@@ -101,7 +102,6 @@ class ControllerPagesProductCollection extends AController
         $resource = new AResource('image');
 
         if ($collectionProducts['items']) {
-            $this->loadModel('catalog/review');
             $this->view->assign('button_add_to_cart', $this->language->get('button_add_to_cart'));
             $productIds = array_column((array) $collectionProducts['items'], 'product_id');
             $products = [];
@@ -168,8 +168,8 @@ class ControllerPagesProductCollection extends AController
                 }
 
                 $productHttpQuery = [];
-                if ($request['path']) {
-                    $productHttpQuery['path'] = $request['path'];
+                if ($get['path']) {
+                    $productHttpQuery['path'] = $get['path'];
                 }
                 $productHttpQuery['product_id'] = $productId;
 
