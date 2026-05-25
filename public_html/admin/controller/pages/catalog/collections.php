@@ -283,18 +283,18 @@ class ControllerPagesCatalogCollections extends AController
             $this->data = array_merge($this->data, $this->request->post);
         }
 
-        $form = new AForm ('ST');
         if ($collection) {
-            $this->data['action'] = $this->html->getSecureURL(
-                'catalog/collections/update',
-                '&id=' . $collectionId
-            );
+            $this->data['action'] = $this->html->getSecureURL('catalog/collections/update','&id=' . $collectionId);
             $this->data['update'] = $this->html->getSecureURL(
                 'listing_grid/collections/update_field',
                 '&id=' . $collectionId
             );
-            $form = new AForm ('HT');
+            $form = new AForm ('HS');
+        }else{
+            $this->data['action'] = $this->html->getSecureURL('catalog/collections/insert');
+            $form = new AForm ('ST');
         }
+
         $form->setForm(
             [
                 'form_name' => 'collectionsFrm',
@@ -307,8 +307,8 @@ class ControllerPagesCatalogCollections extends AController
             [
                 'type'   => 'form',
                 'name'   => 'collectionsFrm',
-                'attr'   => 'data-confirm-exit="true" class="aform form-horizontal"',
                 'action' => $this->data['action'],
+                'attr'   => 'data-confirm-exit="true" class="aform form-horizontal"'
             ]
         );
 
