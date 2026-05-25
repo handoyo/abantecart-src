@@ -324,9 +324,8 @@ class ModelCatalogCollection extends Model
 
         $exists = $this->db->query(
             "SELECT * 
-            FROM " . $this->db->table('collection_descriptions') . " 
-            WHERE collection_id=" . $collectionId . " 
-                AND language_id=" . $languageId
+            FROM " . $this->db->table('collections') . " 
+            WHERE id=" . $collectionId
         );
 
         if ($exists->num_rows) {
