@@ -370,7 +370,8 @@ class ModelCatalogCollection extends Model
                     (SELECT keyword
                     FROM " . $this->db->table("url_aliases") . " 
                     WHERE query = 'collection_id=" . $collectionId . "'
-                        AND language_id = '" . $languageId . "') as keyword 
+                        AND language_id = '" . $languageId . "') as keyword,
+                    c.id
                   FROM " . $this->db->table('collections') . " c 
                   LEFT JOIN " . $this->db->table('collection_descriptions') . " cd 
                       ON (cd.collection_id = c.id AND cd.language_id = " . $languageId . ")
