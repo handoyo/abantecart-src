@@ -121,10 +121,13 @@ class ModelCatalogProduct extends Model
             reset($data['product_description']);
         }
         // if new product
-        elseif (!is_int(key($data['product_description']))) {
-            $update = [];
-            foreach ($data['product_description'] as $field => $value) {
-                $update[$language_id][$field] = $value;
+        else{
+            if (!is_int(key($data['product_description']))) {
+                $update = [
+                    $language_id => $data['product_description']
+                ];
+            }else{
+                $update = $data['product_description'];
             }
             $this->language->replaceDescriptions(
                 'product_descriptions',
