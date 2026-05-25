@@ -136,7 +136,7 @@ echo $collection_tabs ?>
 
 <script type="text/javascript">
     $(document).ready(function () {
-        $('.chosen-container-multi, .chosen-container-single').css('width', '30%');
+        $('#conditions_list').find('.chosen-container-multi, .chosen-container-single').css('width', '30%');
     });
 
     var idx = $('#conditions_list div.form-group').length + 1;
