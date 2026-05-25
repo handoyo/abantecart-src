@@ -45,7 +45,7 @@ class ModelCatalogCollection extends Model
                   FROM " . $this->db->table('collections') . " c 
                   LEFT JOIN " . $this->db->table('collection_descriptions') . " cd 
                       ON (cd.collection_id = c.id AND cd.language_id = " . $languageId . ")
-                  WHERE c.id=" . $collectionId;
+                  WHERE c.id = " . $collectionId." and c.status = 1";
 
         $result = $this->db->query($query);
         if ($result->num_rows) {
