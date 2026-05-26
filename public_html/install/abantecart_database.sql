@@ -702,8 +702,8 @@ CREATE TABLE `ac_customers` (
   `sms` varchar(32) NOT NULL DEFAULT '' COMMENT 'mobile phone number',
   `salt` varchar(8) NOT NULL DEFAULT '',
   `password` varchar(40) NOT NULL DEFAULT '',
-  `cart` LONGTEXT COLLATE utf8mb4_unicode_ci,
-  `wishlist` LONGTEXT COLLATE utf8mb4_unicode_ci,
+  `cart` LONGTEXT,
+  `wishlist` LONGTEXT,
   `newsletter` int(1) NOT NULL DEFAULT '0',
   `address_id` int(11) NOT NULL DEFAULT '0',
   `status` int(1) NOT NULL,
@@ -1397,7 +1397,7 @@ CREATE TABLE `ac_products` (
   `call_to_order` smallint NOT NULL default '0',
   `supplier_code` varchar(100) null,
   `supplier_id` varchar(100) null,
-  `settings` LONGTEXT COLLATE utf8mb4_unicode_ci,
+  `settings` LONGTEXT,
   `date_added` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `date_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`product_id`)
@@ -1472,7 +1472,7 @@ CREATE TABLE `ac_product_options` (
   `element_type` char(1) NOT NULL DEFAULT 'I',
   `required` smallint(1) NOT NULL default '0',
   `regexp_pattern` varchar(255) NOT NULL default '',
-  `settings` text COLLATE utf8mb4_unicode_ci,
+  `settings` text,
   PRIMARY KEY (`product_option_id`)
 ) ENGINE=InnoDb  DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;
 
@@ -12614,13 +12614,13 @@ DROP TABLE IF EXISTS `ac_email_templates`;
 CREATE TABLE `ac_email_templates` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `status` tinyint(1) NOT NULL,
-  `text_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `text_id` varchar(255) NOT NULL,
   `language_id` int(11) NOT NULL,
-  `headers` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `subject` varchar(255) COLLATE utf8_unicode_ci NOT NULL COMMENT 'translatable',
-  `html_body` text COLLATE utf8_unicode_ci NOT NULL COMMENT 'translatable',
-  `text_body` text COLLATE utf8_unicode_ci NOT NULL COMMENT 'translatable',
-  `allowed_placeholders` text COLLATE utf8_unicode_ci NOT NULL,
+  `headers` varchar(255) NOT NULL,
+  `subject` varchar(255) NOT NULL COMMENT 'translatable',
+  `html_body` text NOT NULL COMMENT 'translatable',
+  `text_body` text NOT NULL COMMENT 'translatable',
+  `allowed_placeholders` text NOT NULL,
   `date_added` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `date_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `date_deleted` timestamp NULL DEFAULT NULL,
@@ -12662,9 +12662,9 @@ DROP TABLE IF EXISTS `ac_collections`;
 CREATE TABLE `ac_collections` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `status` tinyint(4) NOT NULL DEFAULT '0',
-  `name` varchar(255) COLLATE utf8_bin DEFAULT NULL,
-  `description` text COLLATE utf8_bin,
-  `conditions` text COLLATE utf8_bin,
+  `name` varchar(255) DEFAULT NULL,
+  `description` text,
+  `conditions` text,
   `date_added` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `date_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
@@ -12675,9 +12675,9 @@ CREATE TABLE `ac_collection_descriptions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `collection_id` int(11) NOT NULL,
   `language_id` int(11) NOT NULL,
-  `title` varchar(255) COLLATE utf8_bin DEFAULT NULL,
-  `meta_keywords` text COLLATE utf8_bin,
-  `meta_description` text COLLATE utf8_bin,
+  `title` varchar(255) DEFAULT NULL,
+  `meta_keywords` text,
+  `meta_description` text,
   `content` longtext NOT NULL COMMENT 'translatable',
   `date_added` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `date_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -13036,7 +13036,7 @@ CREATE TABLE `ac_field_group_to_form` (
           KEY `ac_field_group_to_group_fk` (`group_id`),
           CONSTRAINT `ac_field_group_to_form_fk` FOREIGN KEY (`form_id`) REFERENCES `ac_forms` (`form_id`) ON DELETE CASCADE ON UPDATE CASCADE,
           CONSTRAINT `ac_field_group_to_group_fk` FOREIGN KEY (`group_id`) REFERENCES `ac_field_groups` (`group_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `ac_field_group_to_form`
