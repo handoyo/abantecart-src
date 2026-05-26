@@ -164,7 +164,12 @@ echo $collection_tabs ?>
 
                 $('#collectionsFrm_condition_object').val(0).change();
 
-                setTimeout(()=> { $('.chosen-container-multi, .chosen-container-single').css('width', '40%');}, 300);
+                setTimeout(()=> {
+                    $('#conditions_list')
+                        .find('.chosen-container-multi, .chosen-container-single')
+                        .css('width', '40%');},
+                    300
+                );
             }
         });
     });
