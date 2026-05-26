@@ -263,7 +263,7 @@ class ModelCatalogManufacturer extends Model
                     FROM " . $this->db->table("manufacturers") . " m
                     INNER JOIN " . $this->db->table('manufacturers_to_stores') . " ms
                         ON (m.manufacturer_id = ms.manufacturer_id 
-                            AND ms.store_id = IN (" . implode(', ',$storeIds) . "))";
+                            AND ms.store_id IN (" . implode(', ',$storeIds) . "))";
 
             if (!empty($data['subsql_filter'])) {
                 $sql .= " WHERE " . $data['subsql_filter'];
