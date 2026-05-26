@@ -2336,8 +2336,8 @@ class ModelCatalogProduct extends Model
     public function getProducts($data = [], $mode = 'default')
     {
         $language_id = (int)$data['content_language_id'] ?: $this->config->get('storefront_language_id');
-        $store_id = (int)($data['store_id'] ?? $this->config->get('current_store_id'));
-
+        $storeIds = $data['store_id'] ?? $this->config->get('current_store_id');
+        $storeIds = is_array($storeIds) ? array_map('intval', $storeIds) : [ (int)$storeIds ];
         if ($data || $mode == 'total_only') {
             $match = '';
             $filter = $data['filter'] ?? [];
@@ -2362,7 +2362,7 @@ class ModelCatalogProduct extends Model
                     LEFT JOIN " . $this->db->table("product_descriptions") . " pd
                         ON (p.product_id = pd.product_id AND pd.language_id = '" . $language_id . "')
                     INNER JOIN " . $this->db->table('products_to_stores') . " ps
-                        ON (p.product_id = ps.product_id AND ps.store_id = '" . $store_id . "') ";
+                        ON (p.product_id = ps.product_id AND ps.store_id IN (" . implode(', ',$storeIds) . ")) ";
 
             if ($filter['category']) {
                 $sql .= " INNER JOIN " . $this->db->table("products_to_categories") . " p2c 

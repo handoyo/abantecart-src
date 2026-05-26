@@ -109,6 +109,12 @@ class ControllerResponsesListingGridCollections extends AController
         $this->extensions->hk_UpdateData($this, __FUNCTION__);
     }
 
+    /**
+     * @param array $data
+     *
+     * @return bool
+     * @throws AException
+     */
     protected function validate(array $data)
     {
         $this->loadModel('catalog/collection');
@@ -167,6 +173,13 @@ class ControllerResponsesListingGridCollections extends AController
         $this->extensions->hk_UpdateData($this, __FUNCTION__);
     }
 
+    /**
+     * @param int $instance_id
+     * @param array $value
+     *
+     * @return void|null
+     * @throws AException
+     */
     public function getFieldsByConditionObject($instance_id = 0, $value = [])
     {
         $this->loadLanguage('catalog/collections');
@@ -193,6 +206,13 @@ class ControllerResponsesListingGridCollections extends AController
                 ),
             ]
         );
+        /**
+         * @see getFieldsForProducts()
+         * @see getFieldsForProductPrice()
+         * @see getFieldsForCategories()
+         * @see getFieldsForBrands()
+         * @see getFieldsForTags()
+         */
         $method = 'getFieldsFor'
             . str_replace(
                 ' ',
@@ -218,13 +238,20 @@ class ControllerResponsesListingGridCollections extends AController
         $this->response->setOutput(AJson::encode($response));
     }
 
-    protected function getFieldsForProducts($value = '')
+    /**
+     * @param array $value
+     *
+     * @return array
+     * @throws AException
+     */
+    protected function getFieldsForProducts($value = [])
     {
         $listing_data = [];
         if (is_array($value) && is_array($value['value']) && ($prodIds = filterIntegerIdList($value['value'])) ) {
             /** @var ModelCatalogProduct $pMdl */
             $pMdl = $this->loadModel('catalog/product');
             $filter = ['subsql_filter' => 'p.product_id in (' . implode(',', $prodIds) . ')'];
+            $filter['store_id'] = $value['store_ids'];
 
             $results = $pMdl->getProducts($filter);
             if ($results) {
@@ -276,6 +303,12 @@ class ControllerResponsesListingGridCollections extends AController
         return $response;
     }
 
+    /**
+     * @param array $value
+     *
+     * @return array
+     * @throws AException
+     */
     protected function getFieldsForProductPrice($value = [])
     {
         $response['text'] = $this->language->get('entry_product_price');
@@ -306,7 +339,13 @@ class ControllerResponsesListingGridCollections extends AController
         return $response;
     }
 
-    protected function getFieldsForCategories($value = '')
+    /**
+     * @param array $value
+     *
+     * @return array
+     * @throws AException
+     */
+    protected function getFieldsForCategories($value = [])
     {
         $this->loadLanguage('catalog/collections');
         $response['text'] = $this->language->get('entry_categories');
@@ -326,7 +365,7 @@ class ControllerResponsesListingGridCollections extends AController
         $cMdl = $this->loadModel('catalog/category');
         $results = $cMdl->getCategories(
             ROOT_CATEGORY_ID,
-            $this->config->get('current_store_id')
+            $value['store_ids'] ?? $this->config->get('current_store_id')
         );
         $categories = array_column($results, 'name', 'category_id');
 
@@ -344,7 +383,13 @@ class ControllerResponsesListingGridCollections extends AController
         return $response;
     }
 
-    protected function getFieldsForBrands($value = '')
+    /**
+     * @param $value
+     *
+     * @return array
+     * @throws AException
+     */
+    protected function getFieldsForBrands($value = [])
     {
         $response['text'] = $this->language->get('entry_brands');
         $response['fields'] = $this->form->getFieldHtml(
@@ -361,7 +406,7 @@ class ControllerResponsesListingGridCollections extends AController
 
         /** @var ModelCatalogManufacturer $mMdl */
         $mMdl = $this->loadModel('catalog/manufacturer');
-        $results = $mMdl->getManufacturers();
+        $results = $mMdl->getManufacturers( ['store_id' => $value['store_ids']] );
         $manufacturers = array_column($results, 'name', 'manufacturer_id');
 
         $response['fields'] .= $this->form->getFieldHtml(
@@ -377,7 +422,13 @@ class ControllerResponsesListingGridCollections extends AController
         return $response;
     }
 
-    protected function getFieldsForTags($value = '')
+    /**
+     * @param array $value
+     *
+     * @return array
+     * @throws AException
+     */
+    protected function getFieldsForTags($value = [])
     {
         $response['text'] = $this->language->get('entry_tags');
         $response['fields'] = $this->form->getFieldHtml(
@@ -388,7 +439,7 @@ class ControllerResponsesListingGridCollections extends AController
                     'in'    => $this->language->get('text_in'),
                     'notin' => $this->language->get('text_not_in'),
                 ],
-                'value'   => $value['operator']?:''
+                'value'   => $value['operator'] ?: ''
             ]
         );
         /** @var ModelCatalogProduct $pMdl */

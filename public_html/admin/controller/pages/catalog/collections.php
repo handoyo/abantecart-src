@@ -97,7 +97,6 @@ class ControllerPagesCatalogCollections extends AController
     protected function buildHeader()
     {
         $this->view->assign('form_language_switch', $this->html->getContentLanguageSwitcher());
-        $this->view->assign('form_store_switch', $this->html->getStoreSwitcher());
 
         $this->document->initBreadcrumb(
             [
@@ -496,6 +495,7 @@ class ControllerPagesCatalogCollections extends AController
                     [
                         'operator' => $rule['operator'],
                         'value'    => $rule['value'],
+                        'store_ids'=> $this->data['form']['fields']['general']['store']->value
                     ],
                 ];
                 /** @see ControllerResponsesListingGridCollections::getFieldsByConditionObject() */

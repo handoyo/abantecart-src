@@ -1,25 +1,26 @@
-<?php /*
+<?php
+/*
  *   $Id$
  *
  *   AbanteCart, Ideal OpenSource Ecommerce Solution
  *   http://www.AbanteCart.com
  *
- *   Copyright © 2011-2025 Belavier Commerce LLC
+ *   Copyright © 2011-2026 Belavier Commerce LLC
  *
  *   This source file is subject to Open Software License (OSL 3.0)
- *   License details is bundled with this package in the file LICENSE.txt.
+ *   License details are bundled with this package in the file LICENSE.txt.
  *   It is also available at this URL:
  *   <http://www.opensource.org/licenses/OSL-3.0>
  *
  *  UPGRADE NOTE:
  *    Do not edit or add to this file if you wish to upgrade AbanteCart to newer
  *    versions in the future. If you wish to customize AbanteCart for your
- *    needs please refer to http://www.AbanteCart.com for more information.
+ *    needs, please refer to http://www.AbanteCart.com for more information.
  */
+/** @noinspection PhpMultipleClassDeclarationsInspection */
 if (!defined('DIR_CORE') || !IS_ADMIN) {
     header('Location: static_pages/');
 }
-
 
 class ModelCatalogManufacturer extends Model
 {
@@ -208,7 +209,7 @@ class ModelCatalogManufacturer extends Model
         );
         foreach ($resources as $r) {
             $rm->unmapResource('manufacturers', $manufacturer_id, $r['resource_id']);
-            //if resource became orphan - delete it
+            //if resource became orphan, delete it
             if (!$rm->isMapped($r['resource_id'])) {
                 $rm->deleteResource($r['resource_id']);
             }
@@ -245,11 +246,9 @@ class ModelCatalogManufacturer extends Model
     public function getManufacturers($data = [], $mode = 'default')
     {
         if ($data) {
-            if ($data['store_id']) {
-                $store_id = (int)$data['store_id'];
-            } else {
-                $store_id = (int)$this->config->get('current_store_id');
-            }
+            $storeIds = is_array($data['store_id'])
+                ? array_map('intval', $data['store_id'])
+                : [ (int)($data['store_id']??$this->config->get('current_store_id')) ];
 
             if ($mode == 'total_only') {
                 $total_sql = 'count(*) as total';
@@ -263,7 +262,8 @@ class ModelCatalogManufacturer extends Model
             $sql = "SELECT $total_sql 
                     FROM " . $this->db->table("manufacturers") . " m
                     INNER JOIN " . $this->db->table('manufacturers_to_stores') . " ms
-                        ON (m.manufacturer_id = ms.manufacturer_id AND ms.store_id = '" . $store_id . "')";
+                        ON (m.manufacturer_id = ms.manufacturer_id 
+                            AND ms.store_id = IN (" . implode(', ',$storeIds) . "))";
 
             if (!empty($data['subsql_filter'])) {
                 $sql .= " WHERE " . $data['subsql_filter'];
