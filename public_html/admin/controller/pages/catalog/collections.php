@@ -80,6 +80,7 @@ class ControllerPagesCatalogCollections extends AController
                 'index' => 'date_added',
                 'width' => 50,
                 'align' => 'center',
+                'search' => false,
             ],
         ];
 
