@@ -2175,7 +2175,6 @@ class ModelCatalogProduct extends Model
                     //Category filter
                     if ($condition['object'] === 'categories') {
                         $alias = " p2c" . $k;
-                        $arSelect[] = $alias . ".category_id";
                         $arJoins[] = "LEFT JOIN " . $this->db->table('products_to_categories') . " " . $alias . " 
                                       ON " . $alias . ".product_id = p.product_id";
                         /** @var ModelCatalogCategory $mdl */
@@ -2199,7 +2198,6 @@ class ModelCatalogProduct extends Model
                     //Tags filter
                     if ($condition['object'] === 'tags') {
                         $alias = ' pt' . $k;
-                        $arSelect[] = $alias . '.tag';
                         $arJoins[] = "LEFT JOIN " . $this->db->table('product_tags') . $alias . "
                                      ON (" . $alias . ".product_id = p.product_id
                                         AND " . $alias . ".language_id =" . $languageId . ')';
@@ -2219,7 +2217,7 @@ class ModelCatalogProduct extends Model
                 }
             }
 
-            $query = "SELECT " . implode(',', $arSelect)
+            $query = "SELECT DISTINCT " . implode(',', $arSelect)
                 . " FROM " . $this->db->table('products') . " p ";
             foreach ($arJoins as $arJoin) {
                 $query .= ' ' . $arJoin;
