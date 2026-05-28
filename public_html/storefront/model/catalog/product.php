@@ -1969,7 +1969,6 @@ class ModelCatalogProduct extends Model
     }
 
     /**
-     * @deprecated since 1.4.4
      * @param string $sort
      * @param string $order
      * @param int $start
@@ -1977,6 +1976,7 @@ class ModelCatalogProduct extends Model
      *
      * @return array
      * @throws AException
+     * @deprecated since 1.4.4
      */
     public function getProductSpecials($sort = 'p.sort_order', $order = 'ASC', $start = 0, $limit = 0)
     {
@@ -2150,7 +2150,7 @@ class ModelCatalogProduct extends Model
             $relation = $conditions['relation'];
             $conditions = $conditions['conditions'];
             $arSelect = [
-                $this->db->getSqlCalcTotalRows() . ' p.*',
+                $this->db->getSqlCalcTotalRows() . ' p.* ',
                 $this->_sql_final_price_string(),
                 $this->_sql_avg_rating_string(),
                 $this->_sql_review_count_string(),
@@ -2211,7 +2211,7 @@ class ModelCatalogProduct extends Model
                 }
                 //Product price filter
                 if ($condition['object'] === 'product_price' && (int) $condition['value'] > 0) {
-                    $arWhere[] = "price "
+                    $arWhere[] = str_replace(' as final_price', '', $this->_sql_final_price_string()) . " "
                         . $this->gerEqualOperator($condition['operator'], $relation['value'])
                         . $condition['value'];
                 }
