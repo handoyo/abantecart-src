@@ -35,6 +35,7 @@ class ControllerPagesCatalogCollections extends AController
         $this->extensions->hk_InitData($this, __FUNCTION__);
         $this->loadLanguage('catalog/collections');
         $this->buildHeader();
+        $this->view->assign('form_store_switch', $this->html->getStoreSwitcher());
 
         $grid_settings = [
             'table_id'       => 'collections_grid',
