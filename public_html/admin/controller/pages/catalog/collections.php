@@ -459,6 +459,7 @@ class ControllerPagesCatalogCollections extends AController
                 [
                     'type'    => 'selectbox',
                     'name'    => 'conditions[relation][if]',
+                    'style'   => 'no-save',
                     'options' => [
                         'all' => $this->language->get('text_all'),
                         'any' => $this->language->get('text_any'),
@@ -474,6 +475,7 @@ class ControllerPagesCatalogCollections extends AController
                 [
                     'type'    => 'selectbox',
                     'name'    => 'conditions[relation][value]',
+                    'style'   => 'no-save',
                     'options' => [
                         'true'  => $this->language->get('text_true'),
                         'false' => $this->language->get('text_false'),

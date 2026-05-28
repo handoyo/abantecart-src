@@ -279,6 +279,7 @@ class ControllerResponsesListingGridCollections extends AController
             [
                 'type'    => 'selectbox',
                 'name'    => 'conditions[conditions][' . $this->request->post['idx'] . '][operator]',
+                'style'   => 'no-save',
                 'options' => [
                     'in'    => $this->language->get('text_in'),
                     'notin' => $this->language->get('text_not_in'),
@@ -294,7 +295,7 @@ class ControllerResponsesListingGridCollections extends AController
                 'value'       => !$value ? '' : $value['value'],
                 'options'     => $listing_data,
                 'sortable'    => true,
-                'style'       => 'chosen',
+                'style'       => 'chosen no-save',
                 'ajax_url'    => $this->html->getSecureURL('r/product/product/products'),
                 'placeholder' => $this->language->get('text_select_from_lookup'),
             ]
@@ -316,6 +317,7 @@ class ControllerResponsesListingGridCollections extends AController
             [
                 'type'    => 'selectbox',
                 'name'    => 'conditions[conditions][' . $this->request->post['idx'] . '][operator]',
+                'style'   => 'no-save',
                 'options' => [
                     'eq'   => $this->language->get('text_equal'),
                     'neq'  => $this->language->get('text_not_equal'),
@@ -332,7 +334,7 @@ class ControllerResponsesListingGridCollections extends AController
                 'type'  => 'input',
                 'name'  => 'conditions[conditions][' . $this->request->post['idx'] . '][value]',
                 'value' => !$value ? '' : $value['value'],
-                'style' => 'small-field',
+                'style' => 'small-field no-save',
             ]
         );
         $response['fields'] .= '(' . $this->config->get('config_currency') . ')';
@@ -353,6 +355,7 @@ class ControllerResponsesListingGridCollections extends AController
             [
                 'type'    => 'selectbox',
                 'name'    => 'conditions[conditions][' . $this->request->post['idx'] . '][operator]',
+                'style'   => 'no-save',
                 'options' => [
                     'in'    => $this->language->get('text_in'),
                     'notin' => $this->language->get('text_not_in'),
@@ -375,7 +378,7 @@ class ControllerResponsesListingGridCollections extends AController
                 'name'        => 'conditions[conditions][' . $this->request->post['idx'] . '][value][]',
                 'value'       => !$value ? '' : $value['value'],
                 'options'     => $categories,
-                'style'       => 'chosen',
+                'style'       => 'chosen no-save',
                 'placeholder' => $this->language->get('text_select_category'),
             ]
         );
@@ -401,6 +404,7 @@ class ControllerResponsesListingGridCollections extends AController
                     'notin' => $this->language->get('text_not_in'),
                 ],
                 'value'   => !$value ? '' : $value['operator'],
+                'style'   => 'no-save',
             ]
         );
 
@@ -415,7 +419,7 @@ class ControllerResponsesListingGridCollections extends AController
                 'name'        => 'conditions[conditions][' . $this->request->post['idx'] . '][value][]',
                 'value'       => !$value ? '' : $value['value'],
                 'options'     => $manufacturers,
-                'style'       => 'chosen',
+                'style'       => 'chosen no-save',
                 'placeholder' => $this->language->get('text_select_brand'),
             ]
         );
@@ -439,7 +443,8 @@ class ControllerResponsesListingGridCollections extends AController
                     'in'    => $this->language->get('text_in'),
                     'notin' => $this->language->get('text_not_in'),
                 ],
-                'value'   => $value['operator'] ?: ''
+                'value'   => $value['operator'] ?: '',
+                'style'   => 'no-save',
             ]
         );
         /** @var ModelCatalogProduct $pMdl */
@@ -452,7 +457,7 @@ class ControllerResponsesListingGridCollections extends AController
                 'name'        => 'conditions[conditions][' . $this->request->post['idx'] . '][value][]',
                 'value'       => $value['value']?:'',
                 'options'     => $tags,
-                'style'       => 'chosen',
+                'style'       => 'chosen no-save',
                 'placeholder' => $this->language->get('text_select_tag'),
             ]
         );
