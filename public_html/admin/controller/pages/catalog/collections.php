@@ -530,6 +530,7 @@ class ControllerPagesCatalogCollections extends AController
                 'name'    => 'condition_object',
                 'options' => $this->data['condition_objects'],
                 'value'   => $this->data['promotion_type'],
+                'style'   => 'no-save',
             ]
         );
         $this->data['condition_object']['text'] = $this->language->get('entry_condition_object');
