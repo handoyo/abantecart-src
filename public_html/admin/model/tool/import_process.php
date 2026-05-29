@@ -199,6 +199,16 @@ class ModelToolImportProcess extends Model
                                 'title' => 'Date Available (YYYY-MM-DD format)',
                                 'alias' => 'date available',
                             ],
+                        'products.supplier_code'                       =>
+                            [
+                                'title' => 'Supplier name',
+                                'alias' => 'supplier',
+                            ],
+                        'products.supplier_id'                       =>
+                            [
+                                'title' => 'Supplier Product ID',
+                                'alias' => 'supplier_product_code',
+                            ],
                         'categories.category'                              =>
                             [
                                 'title'      => 'Category Name or Tree',
@@ -310,6 +320,16 @@ class ModelToolImportProcess extends Model
                                 'title' => 'SEO URL',
                                 'alias' => 'seo url',
                             ],
+                        'categories.supplier_code'                       =>
+                            [
+                                'title' => 'Supplier name',
+                                'alias' => 'supplier',
+                            ],
+                        'categories.supplier_id'                       =>
+                            [
+                                'title' => 'Supplier Category ID',
+                                'alias' => 'supplier_category_code',
+                            ],
                         'category_descriptions.name'             =>
                             [
                                 'title'      => 'Category Name or Tree',
@@ -360,6 +380,16 @@ class ModelToolImportProcess extends Model
                                 'title'    => 'Name (up to 64 chars)',
                                 'required' => true,
                                 'alias'    => 'name',
+                            ],
+                        'manufacturers.supplier_code'                       =>
+                            [
+                                'title' => 'Supplier name',
+                                'alias' => 'supplier',
+                            ],
+                        'manufacturers.supplier_id'                       =>
+                            [
+                                'title' => 'Supplier Manufacturer ID',
+                                'alias' => 'supplier_manufacturer_code',
                             ],
                         'images.image'             =>
                             [

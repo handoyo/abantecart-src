@@ -552,7 +552,7 @@ class ModelSaleCustomer extends Model
      */
     public function getCustomers($data = [], $mode = 'default')
     {
-        if ($mode == 'total_only' && !$this->dcrypt->active) {
+        if ($mode == 'total_only') {
             $sql = "SELECT COUNT(*) as total ";
         } else {
             $sql = "SELECT " . $this->db->getSqlCalcTotalRows() . " 
@@ -684,7 +684,7 @@ class ModelSaleCustomer extends Model
         }
 
         //If for total, we're done building the query
-        if ($mode == 'total_only' && !$this->dcrypt->active) {
+        if ($mode == 'total_only') {
             $query = $this->db->query($sql);
             return $query->row['total'];
         }

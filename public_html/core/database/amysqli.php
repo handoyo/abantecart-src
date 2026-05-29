@@ -29,6 +29,8 @@ final class AMySQLi
     private $registry;
     /** @var string */
     public $error;
+    /** @var string last SQL query being fetched (for memory OOM diagnostics) */
+    private $currentFetchSql = '';
 
     private $hostname = '', $username = '', $password = '', $database = '', $port = 3306;
     private $reconnect_cnt = 0;
@@ -101,6 +103,25 @@ final class AMySQLi
 
         $this->registry = Registry::getInstance();
         $this->connection = $connection;
+
+        // register once to catch fatal errors and log the culprit query
+        static $shutdownRegistered = false;
+        if (!$shutdownRegistered) {
+            $shutdownRegistered = true;
+            $self = $this;
+            register_shutdown_function(function () use ($self) {
+                $err = error_get_last();
+                if ($err && $err['type'] === E_ERROR && str_contains($err['message'], 'Allowed memory size')) {
+                    $logFile = DIR_LOGS.'error.txt';
+                    $msg = date('[Y-m-d H:i:s]').' '.__CLASS__.' fatal error during fetch_object().'
+                        .PHP_EOL.'Query: '.$self->currentFetchSql
+                        .PHP_EOL.'Memory limit: '.ini_get('memory_limit')
+                        .PHP_EOL.'Peak usage: '.memory_get_peak_usage(true).' bytes'
+                        .PHP_EOL;
+                    file_put_contents($logFile, $msg, FILE_APPEND);
+                }
+            });
+        }
     }
 
     /**
@@ -156,6 +177,7 @@ final class AMySQLi
             if (!is_bool($result)) {
                 $i = 0;
                 $data = [];
+                $this->currentFetchSql = $sql;
                 while ($row = $result->fetch_object()) {
                     $data[$i] = (array)$row;
                     $i++;
@@ -165,7 +187,9 @@ final class AMySQLi
                 $query->row = $data[0] ?? [];
                 $query->rows = $data;
                 $query->num_rows = (int)$result->num_rows;
+                $result->free();
                 unset($data);
+                $this->currentFetchSql = '';
                 return $query;
             } else {
                 return true;
@@ -260,6 +284,7 @@ final class AMySQLi
         $result = $this->connection->query('select found_rows() as total;');
         if ($result !== false) {
             $row = (array)$result->fetch_object();
+            $result->free();
             return (int)$row['total'];
         }
         return false;
@@ -271,5 +296,12 @@ final class AMySQLi
             'error_text' => mysqli_error($this->connection),
             'errno'      => mysqli_errno($this->connection),
         ];
+    }
+
+    public function __destruct()
+    {
+        if ($this->connection) {
+            $this->connection->close();
+        }
     }
 }
