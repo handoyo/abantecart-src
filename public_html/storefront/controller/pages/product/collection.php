@@ -61,7 +61,9 @@ class ControllerPagesProductCollection extends AController
         $httpQuery = array_merge($httpQuery, (array) $this->data['additional_filters']);
 
         $collectionId = (int) $get['collection_id'];
-        $collectionInfo = $collectionId ? $mdl->getById($collectionId) : [];
+        $collectionInfo = $collectionId 
+            ? $mdl->getById($collectionId, (int)$this->config->get('config_store_id')) 
+            : [];
         if (!$collectionInfo) {
             $this->notFound();
             return;

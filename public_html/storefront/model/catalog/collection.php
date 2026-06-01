@@ -27,33 +27,45 @@ class ModelCatalogCollection extends Model
 {
     /**
      * @param int $collectionId
+     * @param int $storeId
      *
      * @return array|false
      * @throws AException
      */
-    public function getById(int $collectionId)
+    public function getById(int $collectionId, int $storeId = 0)
     {
         if (!$collectionId) {
             return false;
         }
         $languageId = $this->language->getLanguageID();
+
+        $cache_key = 'collection.info.' . (int) $collectionId
+            . '.store_' . $storeId . '_lang_' . $languageId;
+        $result = $this->cache->pull($cache_key);
+
+        if ($result !== false) {
+            return $result;
+        }
+        $output = [];
         $query = "SELECT c.*, cd.*, 
                     (SELECT keyword
                     FROM " . $this->db->table("url_aliases") . " 
                     WHERE query = 'collection_id=" . $collectionId . "'
                         AND language_id = '" . $languageId . "') as keyword 
                   FROM " . $this->db->table('collections') . " c 
+                  INNER JOIN  " . $this->db->table('collections_to_stores') . " c2s
+                      ON (c2s.collection_id = c.id and c2s.store_id = " . $storeId . ")
                   LEFT JOIN " . $this->db->table('collection_descriptions') . " cd 
                       ON (cd.collection_id = c.id AND cd.language_id = " . $languageId . ")
-                  WHERE c.id = " . $collectionId." and c.status = 1";
+                  WHERE c.id = " . $collectionId . " AND c.status = 1";
 
         $result = $this->db->query($query);
         if ($result->num_rows) {
             $output = $result->row;
             $output['conditions'] = json_decode($output['conditions'], true);
-            return $output;
         }
-        return [];
+        $this->cache->push($cache_key, $output);
+        return $output;
     }
 
     /**
@@ -68,7 +80,7 @@ class ModelCatalogCollection extends Model
         if (!$collectionId) {
             return false;
         }
-        $collection = $this->getById($collectionId);
+        $collection = $this->getById($collectionId, (int) $this->config->get('config_store_id'));
         if ($collection && $collection['conditions']) {
             $sortOrder = $this->config->get('config_product_default_sort_order');
             list($sort, $order) = explode('-', $sortOrder);

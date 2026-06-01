@@ -495,7 +495,10 @@ class ControllerResponsesEmbedJS extends AController
         }
 
         $this->loadModel('catalog/collection');
-        $collection = $this->model_catalog_collection->getById($collection_id);
+        $collection = $this->model_catalog_collection->getById(
+            $collection_id, 
+            (int)$this->config->get('config_store_id')
+        );
 
         //can not locate collection? get out
         if (!$collection) {
