@@ -222,6 +222,11 @@ class ModelCatalogCollection extends Model
         }
 
         $this->db->query(
+            "DELETE FROM " . $this->db->table("url_aliases") . " 
+            WHERE query = 'collection_id=" . $collectionId . "'"
+        );
+        
+        $this->db->query(
             "DELETE FROM " . $this->db->table("collections_to_stores") . " 
             WHERE collection_id = '" . $collectionId . "'"
         );
