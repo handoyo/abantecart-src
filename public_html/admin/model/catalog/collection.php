@@ -149,7 +149,7 @@ class ModelCatalogCollection extends Model
             unset($inData['condition_object']);
         }
 
-        $keyword = $inData['keyword'] ?? '';
+        $keyword = $inData['keyword'];
         unset($inData['keyword']);
 
         $arUpdate = [];
