@@ -441,7 +441,6 @@ class ControllerResponsesListingGridCollections extends AController
                 'name'    => 'conditions[conditions][' . $this->request->post['idx'] . '][operator]',
                 'options' => [
                     'in'    => $this->language->get('text_in'),
-                    'notin' => $this->language->get('text_not_in'),
                 ],
                 'value'   => $value['operator'] ?: '',
                 'style'   => 'no-save',
