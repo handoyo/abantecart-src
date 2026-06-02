@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpMultipleClassDeclarationsInspection */
 
 /*
  *   $Id$
@@ -77,10 +78,10 @@ class ControllerPagesCatalogCollections extends AController
                 'search' => false,
             ],
             [
-                'name'  => 'date_added',
-                'index' => 'date_added',
-                'width' => 50,
-                'align' => 'center',
+                'name'   => 'date_added',
+                'index'  => 'date_added',
+                'width'  => 50,
+                'align'  => 'center',
                 'search' => false,
             ],
         ];
@@ -285,13 +286,13 @@ class ControllerPagesCatalogCollections extends AController
         }
 
         if ($collection) {
-            $this->data['action'] = $this->html->getSecureURL('catalog/collections/update','&id=' . $collectionId);
+            $this->data['action'] = $this->html->getSecureURL('catalog/collections/update', '&id=' . $collectionId);
             $this->data['update'] = $this->html->getSecureURL(
                 'listing_grid/collections/update_field',
                 '&id=' . $collectionId
             );
             $form = new AForm ('HS');
-        }else{
+        } else {
             $this->data['action'] = $this->html->getSecureURL('catalog/collections/insert');
             $form = new AForm ('ST');
         }
@@ -309,7 +310,7 @@ class ControllerPagesCatalogCollections extends AController
                 'type'   => 'form',
                 'name'   => 'collectionsFrm',
                 'action' => $this->data['action'],
-                'attr'   => 'data-confirm-exit="true" class="aform form-horizontal"'
+                'attr'   => 'data-confirm-exit="true" class="aform form-horizontal"',
             ]
         );
 
@@ -496,9 +497,9 @@ class ControllerPagesCatalogCollections extends AController
                 $args = [
                     0, //instance_id. @see core/engine/dispatcher
                     [
-                        'operator' => $rule['operator'],
-                        'value'    => $rule['value'],
-                        'store_ids'=> $this->data['form']['fields']['general']['store']->value
+                        'operator'  => $rule['operator'],
+                        'value'     => $rule['value'],
+                        'store_ids' => $this->data['form']['fields']['general']['store']->value,
                     ],
                 ];
                 /** @see ControllerResponsesListingGridCollections::getFieldsByConditionObject() */
@@ -539,10 +540,36 @@ class ControllerPagesCatalogCollections extends AController
             'listing_grid/collections/getFieldsByConditionObject',
             '&id=' . $this->data['id']
         );
-        $this->data['active'] = 'general';
-        $tabs_obj = $this->dispatch('pages/catalog/collection_tabs', [$this->data]);
-        $this->data['collection_tabs'] = $tabs_obj->dispatchGetOutput();
-        unset($tabs_obj);
+
+        $tabs['general'] = [
+            'name'       => 'general',
+            'text'       => $this->language->get('tab_general'),
+            'href'       => $this->data['action'],
+            'active'     => true,
+            'sort_order' => 0,
+        ];
+        if ($collectionId) {
+            $tabs['design'] = [
+                'name'       => 'design',
+                'text'       => $this->language->get('tab_design'),
+                'href'       => $this->html->getSecureURL('catalog/collections/edit_layout', '&id=' . $collectionId),
+                'active'     => false,
+                'sort_order' => 1,
+            ];
+        }
+        $this->buildTabs($tabs);
+    }
+
+    protected function buildTabs(array $tabs)
+    {
+        $obj = $this->dispatch(
+            'responses/common/tabs',
+            [
+                'catalog/collections',
+                ['tabs' => $tabs],
+            ]
+        );
+        $this->data['tabs'] = $obj->dispatchGetOutput();
     }
 
     protected function validate(array $data)
@@ -643,10 +670,6 @@ class ControllerPagesCatalogCollections extends AController
         );
 
         $this->data['active'] = 'layout';
-        //load tabs controller
-        $tabs_obj = $this->dispatch('pages/catalog/collection_tabs', [$this->data]);
-        $this->data['collection_tabs'] = $tabs_obj->dispatchGetOutput();
-        unset($tabs_obj);
 
         $tmpl_id = $this->request->get['tmpl_id'] ? : $this->config->get('config_storefront_template');
         $layout = new ALayoutManager($tmpl_id);
@@ -750,6 +773,25 @@ class ControllerPagesCatalogCollections extends AController
                 'action' => $action,
             ]
         );
+
+        $tabs['general'] = [
+            'name'       => 'general',
+            'text'       => $this->language->get('tab_general'),
+            'href'       => $this->html->getSecureURL('catalog/collections/update', '&id=' . $collectionId),
+            'active'     => false,
+            'sort_order' => 0,
+        ];
+        if ($collectionId) {
+            $tabs['design'] = [
+                'name'       => 'design',
+                'text'       => $this->language->get('tab_design'),
+                'href'       => $this->html->getSecureURL('catalog/collections/edit_layout', '&id=' . $collectionId),
+                'active'     => true,
+                'sort_order' => 1,
+            ];
+        }
+        $this->buildTabs($tabs);
+
         $this->view->batchAssign($this->data);
 
         $this->processTemplate('pages/catalog/collection_layout.tpl');

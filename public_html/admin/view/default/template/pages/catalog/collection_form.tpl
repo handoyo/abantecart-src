@@ -1,6 +1,6 @@
 <?php
 include($tpl_common_dir . 'action_confirm.tpl');
-echo $collection_tabs ?>
+echo $tabs ?>
 <div id="content" class="panel panel-default">
 	<div class="panel-heading col-xs-12">
 		<div class="primary_content_actions pull-left">
@@ -195,5 +195,4 @@ echo $collection_tabs ?>
             }
         });
     });
-
 </script>
