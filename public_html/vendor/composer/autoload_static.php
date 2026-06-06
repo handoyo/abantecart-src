@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit6ac9ca81939f07a637ed5d273c13d562
+class ComposerStaticInit3182ac5ea73f457fb98a5880cdf0d363
 {
     public static $files = array (
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
@@ -25,7 +25,6 @@ class ComposerStaticInit6ac9ca81939f07a637ed5d273c13d562
             'Symfony\\Contracts\\HttpClient\\' => 29,
             'Symfony\\Contracts\\EventDispatcher\\' => 34,
             'Symfony\\Component\\Mime\\' => 23,
-            'Symfony\\Component\\Mailer\\Bridge\\Sendinblue\\' => 43,
             'Symfony\\Component\\Mailer\\Bridge\\Sendgrid\\' => 41,
             'Symfony\\Component\\Mailer\\Bridge\\Postmark\\' => 41,
             'Symfony\\Component\\Mailer\\Bridge\\Mailjet\\' => 40,
@@ -33,6 +32,7 @@ class ComposerStaticInit6ac9ca81939f07a637ed5d273c13d562
             'Symfony\\Component\\Mailer\\Bridge\\Mailchimp\\' => 42,
             'Symfony\\Component\\Mailer\\Bridge\\MailPace\\' => 41,
             'Symfony\\Component\\Mailer\\Bridge\\Google\\' => 39,
+            'Symfony\\Component\\Mailer\\Bridge\\Brevo\\' => 38,
             'Symfony\\Component\\Mailer\\Bridge\\Amazon\\' => 39,
             'Symfony\\Component\\Mailer\\' => 25,
             'Symfony\\Component\\HttpClient\\' => 29,
@@ -97,10 +97,6 @@ class ComposerStaticInit6ac9ca81939f07a637ed5d273c13d562
         array (
             0 => __DIR__ . '/..' . '/symfony/mime',
         ),
-        'Symfony\\Component\\Mailer\\Bridge\\Sendinblue\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/symfony/sendinblue-mailer',
-        ),
         'Symfony\\Component\\Mailer\\Bridge\\Sendgrid\\' => 
         array (
             0 => __DIR__ . '/..' . '/symfony/sendgrid-mailer',
@@ -128,6 +124,10 @@ class ComposerStaticInit6ac9ca81939f07a637ed5d273c13d562
         'Symfony\\Component\\Mailer\\Bridge\\Google\\' => 
         array (
             0 => __DIR__ . '/..' . '/symfony/google-mailer',
+        ),
+        'Symfony\\Component\\Mailer\\Bridge\\Brevo\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/brevo-mailer',
         ),
         'Symfony\\Component\\Mailer\\Bridge\\Amazon\\' => 
         array (
@@ -212,10 +212,10 @@ class ComposerStaticInit6ac9ca81939f07a637ed5d273c13d562
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit6ac9ca81939f07a637ed5d273c13d562::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit6ac9ca81939f07a637ed5d273c13d562::$prefixDirsPsr4;
-            $loader->prefixesPsr0 = ComposerStaticInit6ac9ca81939f07a637ed5d273c13d562::$prefixesPsr0;
-            $loader->classMap = ComposerStaticInit6ac9ca81939f07a637ed5d273c13d562::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit3182ac5ea73f457fb98a5880cdf0d363::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit3182ac5ea73f457fb98a5880cdf0d363::$prefixDirsPsr4;
+            $loader->prefixesPsr0 = ComposerStaticInit3182ac5ea73f457fb98a5880cdf0d363::$prefixesPsr0;
+            $loader->classMap = ComposerStaticInit3182ac5ea73f457fb98a5880cdf0d363::$classMap;
 
         }, null, ClassLoader::class);
     }

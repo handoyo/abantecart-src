@@ -9,18 +9,16 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Mailer\Bridge\Sendinblue\Transport;
+namespace Symfony\Component\Mailer\Bridge\Brevo\Transport;
 
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 
 /**
- * @author Yann LUCAS
- *
- * @deprecated since Symfony 6.4, use BrevoSmtpTransport instead
+ * @author Pierre TANGUY
  */
-final class SendinblueSmtpTransport extends EsmtpTransport
+final class BrevoSmtpTransport extends EsmtpTransport
 {
     public function __construct(string $username, #[\SensitiveParameter] string $password, ?EventDispatcherInterface $dispatcher = null, ?LoggerInterface $logger = null)
     {
