@@ -8,7 +8,9 @@
             } else {
                 if(!$item['resource_code']){
                     $image = '<a href="'. $item['href']. '">' . $item['thumb']['thumb_html'] . '</a>';
-                    echo '<div class="image">'. $image .'</div><div style="clear: both;"></div>';
+                    echo '<div class="image">'. $image
+                        . $this->getHookvar('product_listing_badge_'.$item['product_id'])
+                        .'</div><div style="clear: both;"></div>';
                 }
                 if($item['name']){
                     echo '<div class="title">

@@ -8,14 +8,16 @@
             } else {
                 if(!$item['resource_code']){
                     $image = '<a href="'. $item['href']. '">' . $item['thumb']['thumb_html'] . '</a>';
-                    echo '<div class="image">'. $image .'</div><div style="clear: both;"></div>';
+                    echo '<div class="image">'. $image
+                        . $this->getHookvar('product_listing_badge_'.$item['product_id'])
+                        .'</div><div style="clear: both;"></div>';
                 }
                 if($item['name']){
                     echo '<div class="title">
                             <a href="'.$item['image']['main_url'].'">'.$item['name'].'</a>
                           </div>';
                 }
-                echo $this->getHookvar('product_listing_details_after_blurb_'.$product['product_id']);
+                echo $this->getHookvar('product_listing_details_after_blurb_'.$item['product_id']);
                 if ( $item['price'] ) {
                     echo '<div class="price-add">
                          <span class="price">' . $item['price'] . '</span>

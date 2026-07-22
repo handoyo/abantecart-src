@@ -84,6 +84,7 @@ if($products){ ?>
 										<?php echo $text_out_of_stock; ?>
 									</span>
                                             <?php }?>
+                                            <?php echo $this->getHookvar('product_listing_badge_'.$product['product_id']);?>
                                             <div class="overlay d-flex align-items-end end-0 start-0 bottom-0 position-absolute">
                                                 <?php
                                                 if ($product['new_product']) { ?>
