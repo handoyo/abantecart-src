@@ -671,4 +671,8 @@
 		<key>text_fixed_amount_off</key>
 		<value><![CDATA[Fixed Amount Off]]></value>
 	</definition>
+	<definition>
+		<key>entry_dimensions</key>
+		<value><![CDATA[Dimensions:]]></value>
+	</definition>
 </definitions>

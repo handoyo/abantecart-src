@@ -55,6 +55,9 @@ if (!defined('DIR_CORE')) {
  * @method PaginationHtmlElement buildPagination(array $data)
  * @method ModalHtmlElement buildModal(array $data)
  * @method LabelHtmlElement buildLabel(array $data)
+ * @method SlotHtmlElement buildSlot(array $data)
+ * @method ColorHtmlElement buildColor(array $data)
+ * @method RangeHtmlElement buildRange(array $data)
  */
 class AHtml extends AController
 {
@@ -127,10 +130,10 @@ class AHtml extends AController
             $subUrl .= '&sf=' . $this->request->get['sf'];
         }
 
-        //if in embed mode add response prefix
+        //if in embed mode, add response prefix
         if ($this->registry->get('config')->get('embed_mode')) {
             $subUrl .= '&embed_mode=1';
-            if (substr($rt, 0, 2) != 'r/') {
+            if (!str_starts_with($rt, 'r/')) {
                 $rt = 'r/' . $rt;
             }
         }
@@ -166,7 +169,7 @@ class AHtml extends AController
     }
 
     /**
-     * Get non-secure URL. Read note below.
+     * Get non-secure URL. Read the note below.
      *
      * @param string $rt
      * @param string $params
@@ -203,7 +206,7 @@ class AHtml extends AController
                 ? HTTPS_SERVER . $seo_prefix
                 : 'https://' . REAL_HOST . get_url_path($_SERVER['PHP_SELF']);
         } else {
-            //to prevent garbage session need to check constant HTTP_SERVER
+            //to prevent garbage session, need to check constant HTTP_SERVER
             $server = defined('HTTP_SERVER')
                 ? HTTP_SERVER . $seo_prefix
                 : 'http://' . REAL_HOST . get_url_path($_SERVER['PHP_SELF']);
@@ -344,7 +347,7 @@ class AHtml extends AController
     }
 
     /**
-     * encode URL for & to be &amp
+     * encode URL for "&" to be "&amp"
      *
      * @param string $url
      * @param bool $encode
@@ -361,7 +364,7 @@ class AHtml extends AController
     }
 
     /**
-     * Current URL built based on get params with ability to exclude params
+     * Current URL built based on get params with the ability to exclude params
      *
      * @param $filter_params array - array of vars to filter
      *
@@ -403,7 +406,7 @@ class AHtml extends AController
     }
 
     /**
-     * Build URI from array provided
+     * Build URI from the array provided
      *
      * @param $params_arr    array - data array to process
      * @param $filter_params array - array of vars to filter
@@ -519,7 +522,7 @@ class AHtml extends AController
          * @var ModelSettingStore $model
          */
         $model = $registry->get('model_setting_store');
-        //if loaded not default store - hide store switcher
+        //if non-default store loaded, hide store switcher
         $default_store_settings = $model->getStore(0);
         if ($this->registry->get('config')->get('config_url') != $default_store_settings['config_url']) {
             return '';
@@ -884,10 +887,10 @@ class HtmlElementFactory
 
     /**
      *  return array of HTML elements supported
-     *  array key - code of element
+     *  array key - code of an element
      *  [
      *   type - element type
-     *   method - method in html class to get element html
+     *   method - method in html class to get an element html
      *   class - element class
      *  ]
      *
@@ -1608,7 +1611,7 @@ class TextareaHtmlElement extends HtmlElement
  * @property string $required
  * @property string $style
  * @property string $placeholder
- * @property string $base_url - need for inserting pictures into html for emails
+ * @property string $base_url - need to insert pictures into HTML for emails
  * @property bool $preview - enable/disable visual mode of tinymce. default true
  * @property string $preview_url - custom preview url
  * @property string $js_onload - custom js-code will be run on doc ready
@@ -1838,6 +1841,7 @@ class MultiSelectBoxHtmlElement extends HtmlElement
  * @property string $required
  * @property string $style
  * @property string $label_text
+ * @property string $display_name
  * @property string $help_url
  */
 class CheckboxHtmlElement extends HtmlElement
@@ -2229,7 +2233,7 @@ class PasswordsetHtmlElement extends HtmlElement
 /**
  * Class ResourceHtmlElement
  *
- * @property string $rl_type - image or audio or pdf etc
+ * @property string $rl_type - image or audio or PDF etc.
  * @property string $element_id
  * @property string $name
  * @property string $resource_path
@@ -3060,5 +3064,29 @@ class RangeHtmlElement extends HtmlElement
 
         $this->view->batchAssign($data);
         return $this->view->fetch($this->template ?: 'form/range.tpl');
+    }
+}
+
+/**
+ * @property string $name
+ * @property array $data
+
+ */
+class SlotHtmlElement extends HtmlElement
+{
+    public function getHtml()
+    {
+        $data = array_merge(
+            (array)$this->data,
+            [
+                'id'       => $this->element_id,
+                'name'     => $this->name                
+            ]
+        );
+        if(!$this->view->isTemplateExists($this->template)) {
+            throw new AException(0, __CLASS__.': Template not found: ' . $this->template);
+        }
+        $this->view->batchAssign($data);
+        return $this->view->fetch($this->template);
     }
 }

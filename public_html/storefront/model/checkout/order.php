@@ -557,11 +557,13 @@ class ModelCheckoutOrder extends Model
             return false;
         }
         $orderInfo = $this->dcrypt->decrypt_data($order_query->row, 'orders');
+        $this->data['order_info'] = &$orderInfo;
         $update = [];
 
         //update order status
         $update[] = "order_status_id = '" . (int) $order_status_id . "'";
-        $sql = "UPDATE `" . $this->db->table("orders") . "`
+        $this->data['order_info']['order_status_id'] = (int) $order_status_id;
+        $sql = "UPDATE " . $this->db->table('orders') . "
                 SET " . implode(", ", $update) . "
                 WHERE order_id = '" . (int) $orderId . "'";
         $this->db->query($sql);

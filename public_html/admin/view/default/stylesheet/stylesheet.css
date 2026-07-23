@@ -3827,3 +3827,14 @@ blockquote p::after {
     padding: 20px;
     background: #064770;
 }
+
+.product-dimensions-flex {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.product-dimensions-item {
+    flex: 0 0 auto;
+}
