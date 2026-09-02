@@ -10,10 +10,10 @@
   </definition>
   <definition>
     <key>text_file_tail</key>
-    <value><![CDATA[Due to large size of the log file, only last 500Kb of data can be viewed in here.<br>To view complete log, get it from your server directly.Path:       ]]></value>
+    <value><![CDATA[Due to the large size of the log file, only the last 500Kb of data can be viewed in here.<br>To view the complete log, download it from your server directly.]]></value>
   </definition>
   <definition>
     <key>text_file_error</key>
-    <value><![CDATA[ File does not exists or not readable! ]]></value>
+    <value><![CDATA[ File does not exist or is not readable! ]]></value>
   </definition>
 </definitions>

@@ -52,8 +52,20 @@ class ControllerCommonHeader extends AController
         $this->data['action'] = $this->html->getSecureURL('index/home');
         $this->data['search_action'] = $this->html->getSecureURL('tool/global_search');
 
-        $this->data['logo'] = $this->config->get('config_logo_' . $this->language->getLanguageID())
-            ?: $this->config->get('config_logo');
+        if($this->session->data['current_store_id']) {
+            $storeSettings = $this->db->query(
+                "SELECT * 
+                    FROM " . $this->db->table("settings") . "
+                    WHERE store_id = '" . (int)$this->session->data['current_store_id'] . "' 
+                        AND `key` LIKE ('config_logo%')"
+            );
+            $storeSettings = array_column($storeSettings->rows,'value', 'key');
+            $this->data['logo'] = $storeSettings['config_logo_' . $this->language->getLanguageID()]
+                ? : $storeSettings['config_logo'];
+        }else{
+            $this->data['logo'] = $this->config->get('config_logo_' . $this->language->getLanguageID())
+                ? : $this->config->get('config_logo');
+        }
         if (is_numeric($this->data['logo'])) {
             $resource = new AResource('image');
             $image_data = $resource->getResource($this->data['logo']);

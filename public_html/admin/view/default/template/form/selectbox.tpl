@@ -3,7 +3,8 @@
 		name="<?php echo $name ?>"
 		id="<?php echo $id ?>"
 		data-orgvalue="<?php echo is_array($ovalue) ? key($ovalue) : $ovalue; ?>" <?php echo $attr ?>
-		<?php echo $disabled ? ' disabled="disabled" ' : ''; ?>	>
+<?php   echo $disabled ? ' disabled="disabled" ' : '';
+        echo $title ? ' title="'.html2view( $title ).'" ' : ''; ?>	>
 <?php foreach ( $options as $v => $text ) { ?>
 		<option value="<?php echo $v ?>"
 		<?php echo (in_array((string)$v, (array)$value, true) ? ' selected="selected" ':'') ?>
@@ -12,14 +13,17 @@
 <?php } ?>
 </select>
 
-<?php if ( $required == 'Y' || !empty ($help_url) ) { ?>
+<?php if ( $required || $help_url ) { ?>
 	<span class="input-group-addon">
-	<?php if ( $required == 'Y') { ?> 
+	<?php if ( $required ) { ?> 
 		<span class="required">*</span>
-	<?php } ?>
-
-	<?php if ( !empty ($help_url) ) { ?>
-	<span class="help_element"><a href="<?php echo $help_url; ?>" target="new"><i class="fa fa-question-circle fa-lg"></i></a></span>
+	<?php }
+    if ( !empty ($help_url) ) { ?>
+	    <span class="help_element">
+            <a href="<?php echo $help_url; ?>" target="_blank">
+                <i class="fa fa-question-circle fa-lg"></i>
+            </a>
+        </span>
 	<?php } ?>
 	</span>
 <?php } ?>

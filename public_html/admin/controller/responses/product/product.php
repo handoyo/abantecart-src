@@ -2165,7 +2165,7 @@ class ControllerResponsesProductProduct extends AController
     {
         //init controller data
         $this->extensions->hk_InitData($this, __FUNCTION__);
-        $output = null;
+        $this->data['output'] = [];
         $price = $this->request->get['price'];
         $priceWithTax = $this->request->get['price_with_tax'];
         $taxClassId = (int)$this->request->get['tax_class_id'];
@@ -2173,15 +2173,25 @@ class ControllerResponsesProductProduct extends AController
             $cData = [];
             $tax = new ATax($this->registry, $cData);
             if (isset($price)) {
-                $output = $tax->calculate((float)$price, $taxClassId);
+                $this->data['output']['price'] = $this->currency->format_number((float)$price);
+                $this->data['output']['price_with_tax'] = $this->currency->format_number(
+                    $tax->calculate((float)$price, $taxClassId, true)
+                );      
             } elseif (isset($priceWithTax)) {
-                $output = $tax->calculate((float)$priceWithTax, $taxClassId, true, true);
+                $this->data['output']['price'] = $this->currency->format_number(
+                    $tax->calculate((float)$priceWithTax, $taxClassId, true, true)
+                );
+                $this->data['output']['price_with_tax'] = $this->currency->format_number($priceWithTax ?: $price);
             }
         }else{
-            $output = max($price,$priceWithTax);
+            $price = (float)$price;
+            $priceWithTax = (float)$priceWithTax;
+            $this->data['output']['price'] = $this->currency->format_number($price ?: $priceWithTax);
+            $this->data['output']['price_with_tax'] = $this->currency->format_number($priceWithTax ?: $price);
         }
         //update controller data
         $this->extensions->hk_UpdateData($this, __FUNCTION__);
-        $this->response->setOutput($output);
+        $this->response->addJSONHeader();
+        $this->response->setOutput( json_encode($this->data['output']) );
     }
 }

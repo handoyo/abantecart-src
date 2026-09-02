@@ -185,6 +185,30 @@
 		<value><![CDATA[Downloads]]></value>
 	</definition>
 	<definition>
+		<key>tab_audio</key>
+		<value><![CDATA[Audio]]></value>
+	</definition>
+	<definition>
+		<key>tab_video</key>
+		<value><![CDATA[Video]]></value>
+	</definition>
+	<definition>
+		<key>tab_pdf</key>
+		<value><![CDATA[PDF Document]]></value>
+	</definition>
+	<definition>
+		<key>tab_archive</key>
+		<value><![CDATA[Archive]]></value>
+	</definition>
+	<definition>
+		<key>text_download_resource</key>
+		<value><![CDATA[Download]]></value>
+	</definition>
+	<definition>
+		<key>text_open_resource</key>
+		<value><![CDATA[Open]]></value>
+	</definition>
+	<definition>
 		<key>text_start_download</key>
 		<value><![CDATA[Start Download]]></value>
 	</definition>

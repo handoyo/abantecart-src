@@ -257,9 +257,9 @@ class ModelCheckoutOrder extends Model
                 //remove
             } else {
                 //do not clear custom columns during order rebuild
-                $priorData = array_intersect($query->row,(array)$this->data['order_column_list']);
-                foreach($priorData as $key => $value) {
-                    if($value) {
+                $priorData = array_intersect($query->row, (array) $this->data['order_column_list']);
+                foreach ($priorData as $key => $value) {
+                    if ($value) {
                         $data[$key] = $value;
                     }
                 }
@@ -579,26 +579,32 @@ class ModelCheckoutOrder extends Model
         );
         $orderInfo['comment'] = $orderInfo['comment'] . ' ' . $comment;
 
-        $order_product_query = $this->db->query(
+        $orderProductResult = $this->db->query(
             "SELECT *
              FROM " . $this->db->table("order_products") . "
              WHERE order_id = '" . (int) $orderId . "'"
         );
+        $this->data['order_info']['products'] = $orderProductResult->rows;
         // load language for IM
         $language = new ALanguage($this->registry);
         $language->load($language->language_details['directory']);
         $language->load('common/im');
 
         //update the product's inventory
-        foreach ($order_product_query->rows as $product) {
+        foreach ($this->data['order_info']['products'] as &$product) {
             $orderOptionResult = $this->db->query(
-                "SELECT op.*, pov.subtract
-                FROM " . $this->db->table("order_options") . " op
+                "SELECT oo.*, po.element_type, p.sku, p.product_id, pov.subtract 
+                FROM " . $this->db->table("order_options") . " oo
                 LEFT JOIN " . $this->db->table("product_option_values") . " pov
-                    ON pov.product_option_value_id = op.product_option_value_id
-                WHERE op.order_id = '" . (int) $orderId . "'
-                   AND op.order_product_id = '" . (int) $product['order_product_id'] . "'"
+                    ON pov.product_option_value_id = oo.product_option_value_id
+                LEFT JOIN " . $this->db->table("product_options") . " po
+                    ON po.product_option_id = pov.product_option_id
+                LEFT JOIN " . $this->db->table("products") . " p
+                    ON p.product_id = po.product_id
+                WHERE oo.order_id = '" . (int) $orderId . "' 
+                    AND oo.order_product_id = '" . (int) $product['order_product_id'] . "'"
             );
+            $product['options'] = $orderOptionResult->rows;
             //update options stock
             $stock_updated = false;
             foreach ($orderOptionResult->rows as $option) {
@@ -703,6 +709,7 @@ class ModelCheckoutOrder extends Model
                 }
             }
         }
+        unset($product);
 
         //clean product cache as stock might have changed.
         $this->cache->remove('product');
@@ -715,11 +722,6 @@ class ModelCheckoutOrder extends Model
         $languageId = $language->getLanguageID();
 
         $this->load->model('localisation/currency');
-        $order_product_query = $this->db->query(
-            "SELECT *
-            FROM " . $this->db->table("order_products") . "
-            WHERE order_id = '" . (int) $orderId . "'"
-        );
 
         $orderTotals = $this->getOrderTotals($orderId);
         foreach ($orderTotals as $row) {
@@ -873,7 +875,7 @@ class ModelCheckoutOrder extends Model
             $this->data['products'] = [];
         }
 
-        $orderProductIds = array_column($order_product_query->rows, 'product_id');
+        $orderProductIds = array_column($this->data['order_info']['products'], 'product_id');
         $resource = new AResource('image');
         $thumbnails = $resource->getMainThumbList(
             'products',
@@ -882,23 +884,9 @@ class ModelCheckoutOrder extends Model
             $this->config->get('config_image_cart_height')
         );
 
-        foreach ($order_product_query->rows as $product) {
+        foreach ($this->data['order_info']['products'] as $product) {
             $option_data = [];
-
-            $orderOptionResult = $this->db->query(
-                "SELECT oo.*, po.element_type, p.sku, p.product_id
-                FROM " . $this->db->table("order_options") . " oo
-                LEFT JOIN " . $this->db->table("product_option_values") . " pov
-                    ON pov.product_option_value_id = oo.product_option_value_id
-                LEFT JOIN " . $this->db->table("product_options") . " po
-                    ON po.product_option_id = pov.product_option_id
-                LEFT JOIN " . $this->db->table("products") . " p
-                    ON p.product_id = po.product_id
-                WHERE oo.order_id = '" . (int) $orderId . "' 
-                    AND oo.order_product_id = '" . (int) $product['order_product_id'] . "'"
-            );
-
-            foreach ($orderOptionResult->rows as $option) {
+            foreach ($product['options'] as $option) {
                 if ($option['element_type'] == 'H') {
                     continue;
                 } //skip hidden options
@@ -911,12 +899,19 @@ class ModelCheckoutOrder extends Model
                 ];
             }
 
-            $imgFile = str_replace(AUTO_SERVER, DIR_ROOT . DS, $thumbnails[(int) $product['product_id']]['thumb_url']);
+            $imgFile = str_replace(
+                AUTO_SERVER,
+                DIR_ROOT . DS,
+                $thumbnails[(int) $product['product_id']]['thumb_url']
+            );
             $thumbnailUrl = is_file($imgFile)
                 ? 'data:' . mime_content_type($imgFile) . ';base64,' . base64_encode(file_get_contents($imgFile))
                 : '';
-            $thumbnailRemoteUrl =
-                str_replace(AUTO_SERVER, HTTPS_SERVER, $thumbnails[(int) $product['product_id']]['thumb_url']);
+            $thumbnailRemoteUrl = str_replace(
+                AUTO_SERVER,
+                HTTPS_SERVER,
+                $thumbnails[(int) $product['product_id']]['thumb_url']
+            );
 
             $this->data['products'][] = array_merge(
                 $product,
@@ -1092,8 +1087,8 @@ class ModelCheckoutOrder extends Model
      */
     public function _update($orderId, $orderStatusId, $comment = '', $notify = false)
     {
-        $orderId = (int)$orderId;
-        $orderStatusId = (int)$orderStatusId;
+        $orderId = (int) $orderId;
+        $orderStatusId = (int) $orderStatusId;
         $result = $this->db->query(
             "SELECT *
             FROM " . $this->db->table("orders") . " o
@@ -1106,8 +1101,8 @@ class ModelCheckoutOrder extends Model
         if (!$result->num_rows) {
             return;
         }
-        if(!$orderStatusId){
-            $this->log->write('Order #'.$orderId.' cannot be updated with status "Incomplete"!');
+        if (!$orderStatusId) {
+            $this->log->write('Order #' . $orderId . ' cannot be updated with status "Incomplete"!');
             return;
         }
 
@@ -1131,7 +1126,7 @@ class ModelCheckoutOrder extends Model
         $language->load($orderData['filename']);
         $language->load('mail/order_update');
 
-        $statusName = $this->order_status->getName($orderStatusId, (int)$orderData['language_id']);
+        $statusName = $this->order_status->getName($orderStatusId, (int) $orderData['language_id']);
 
         $language_im = new ALanguage($this->registry);
         $language->load($language->language_details['directory']);
@@ -1381,13 +1376,13 @@ class ModelCheckoutOrder extends Model
         $ordersTable = $this->db->table('orders');
 
         $sql = 'SELECT product_id 
-                FROM ' . $orderProductsTable .
-            ' INNER JOIN ' . $ordersTable . ' 
+                FROM ' . $orderProductsTable
+            . ' INNER JOIN ' . $ordersTable . ' 
                     ON ' . $ordersTable . '.order_id=' . $orderProductsTable . '.order_id 
                         AND ' . $ordersTable . '.customer_id=' . $customerId . ' 
                         AND ' . $ordersTable . '.order_status_id>0 
-                        AND ' . $ordersTable . '.store_id=' . $this->config->get('config_store_id') .
-            ' WHERE ' . $orderProductsTable . '.product_id=' . $productId . ' 
+                        AND ' . $ordersTable . '.store_id=' . $this->config->get('config_store_id')
+            . ' WHERE ' . $orderProductsTable . '.product_id=' . $productId . ' 
                  LIMIT 1';
         $result = $this->db->query($sql);
         if ($result->num_rows > 0) {
@@ -1413,13 +1408,13 @@ class ModelCheckoutOrder extends Model
         $ordersTable = $this->db->table('orders');
 
         $sql = 'SELECT product_id 
-                FROM ' . $orderProductsTable .
-            ' INNER JOIN ' . $ordersTable . ' 
+                FROM ' . $orderProductsTable
+            . ' INNER JOIN ' . $ordersTable . ' 
                     ON ' . $ordersTable . '.order_id=' . $orderProductsTable . '.order_id 
                         AND ' . $ordersTable . '.customer_id=' . $customerId . ' 
                         AND ' . $ordersTable . '.order_status_id>0
-                        AND ' . $ordersTable . '.store_id=' . $this->config->get('config_store_id') .
-            ' WHERE ' . $orderProductsTable . '.product_id IN (' . implode(',', $productIds) . ')';
+                        AND ' . $ordersTable . '.store_id=' . $this->config->get('config_store_id')
+            . ' WHERE ' . $orderProductsTable . '.product_id IN (' . implode(',', $productIds) . ')';
         $result = $this->db->query($sql);
         if ($result->num_rows > 0) {
             $arProducts = [];
@@ -1498,7 +1493,7 @@ class ModelCheckoutOrder extends Model
     public function getChecksum(int $orderId)
     {
         $orderData = $this->getOrderTotals($orderId);
-        if(!$orderData){
+        if (!$orderData) {
             //case with empty order data.
             // Set random word to avoid md5 brut-force
             $orderData = randomWord(16);

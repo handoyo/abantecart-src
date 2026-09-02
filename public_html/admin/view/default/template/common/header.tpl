@@ -10,21 +10,18 @@
 	<div class="leftpanel">
 		<div class="logopanel">
 			<i class="sticky_header fa fa-toggle-off fa-fw"></i>
-			<a href="<?php echo $home; ?>">
-				<?php
-				if ($this->getHookVar('logoimage_hookvar')){
-					echo $this->getHookVar('logoimage_hookvar');
-				} else{
-				    ?>
-					<img class="logo_image"
-                         src="<?php echo $template_dir; ?>image/logo.png"
+            <a class="text-center" href="<?php echo $home; ?>">
+                <?php
+                if ($this->getHookVar('logoimage_hookvar')) {
+                    echo $this->getHookVar('logoimage_hookvar');
+                } else { ?>
+                    <img class="img-responsive center-block"
+                         src="<?php echo $logo ? HTTP_DIR_RESOURCE . $logo : $template_dir.'image/logo.png'; ?>"
                          style="max-width:190px; max-height: 40px;"
-						 alt="<?php echo_html2view($heading_title); ?>"
-						 title="<?php echo_html2view($heading_title); ?>"/>
-					<?php
-				}
-				?>
-			</a>
+                         alt="<?php echo_html2view($heading_title); ?>"
+                         title="<?php echo_html2view($heading_title); ?>"/>
+            <?php } ?>
+            </a>
 		</div>
 		<div class="leftpanelinner">
 			<i class="sticky_left fa fa-toggle-off fa-fw"></i>
@@ -318,9 +315,9 @@ echo $this->html->buildElement(
                     //if controller present need to open modal
                     var onclick = 'onClick="window.open(&apos;' + row.page + '&apos;);"';
                     if (row.controller) {
-                        onclick = ' data-toggle="modal" data-target="#message_modal"' + 'href="' + row.controller + '" ';
+                        onclick = ' data-toggle="modal" data-target="#message_modal"' + ' href="' + row.controller + '" ';
                     }
-                    var html = '<a ' + onclick + ' "class=search_result" title="' + row.text + '">' + row.title + '</a>';
+                    var html = '<a ' + onclick + ' class="search_result" title="' + row.text + '">' + row.title + '</a>';
                     dataobj[row.category].items.push({value: row.order_id, text: html});
                 });
                 var results = [];
@@ -423,7 +420,7 @@ echo $this->html->buildElement(
 
 <?php
 }
-$loader = '<div style="min-height: 60px"><div id="hist_loading" class="center_div_abs"><i class="fa fa-spinner fa-spin fa-2x"></i></div></div>';
+$loader = '<div style="min-height: 60px"><div class="center_div_abs"><i class="fa fa-spinner fa-spin fa-2x"></i></div></div>';
 echo $this->html->buildElement(
     [
         'type'        => 'modal',

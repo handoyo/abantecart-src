@@ -1,4 +1,5 @@
 <?php
+
 /*
  *   $Id$
  *
@@ -23,12 +24,15 @@ if (!defined('DIR_CORE') || !IS_ADMIN) {
 
 class ControllerPagesToolErrorLog extends AController
 {
+    const VIEW_SIZE_LIMIT = 500000;
+
     public function main()
     {
+        $this->data['log'] = [];
         //init controller data
         $this->extensions->hk_InitData($this, __FUNCTION__);
         $this->loadLanguage('tool/error_log');
-        $this->data['button_clear'] = $this->language->get('button_clear');
+
         if (isset($this->session->data['success'])) {
             $this->data['success'] = $this->session->data['success'];
             unset($this->session->data['success']);
@@ -43,27 +47,28 @@ class ControllerPagesToolErrorLog extends AController
             $this->data['error'] = '';
         }
 
-        $filename = $this->request->get['filename'] ?: $this->config->get('config_error_filename');
+        $filename = $this->request->get['filename'] ? : $this->config->get('config_error_filename');
         //remove relative parents from the filename to avoid directory traversal
-        $filename = str_replace('..'.DS, '', $filename);
-        $file = DIR_LOGS.$filename;
-        if(!is_file($file)) {
-            redirect($this->html->getSecureURL(
-                'tool/error_log',
-                '&'.http_build_query(['filename' => $this->config->get('config_error_filename')]))
+        $filename = str_replace('..' . DS, '', $filename);
+        $file = DIR_LOGS . $filename;
+        if (!is_file($file)) {
+            redirect(
+                $this->html->getSecureURL(
+                    'tool/error_log',
+                    '&' . http_build_query(['filename' => $this->config->get('config_error_filename')])
+                )
             );
         }
 
-        $this->data['main_url'] = $this->html->getSecureURL( 'tool/error_log');
-        $this->data['clear_url'] = $this->html->getSecureURL( 'tool/error_log/clearlog', '&filename='.$filename );
+        $this->data['main_url'] = $this->html->getSecureURL('tool/error_log');
 
         $all_logs = array_merge(
-            glob(DIR_LOGS.'{*.log,*.txt}', GLOB_BRACE),
-            glob(DIR_LOGS.'*/{*.log,*.txt}', GLOB_BRACE)
+            glob(DIR_LOGS . '{*.log,*.txt,*.gz}', GLOB_BRACE),
+            glob(DIR_LOGS . '*/{*.log,*.txt,*.gz}', GLOB_BRACE)
         );
         $options = [];
-        foreach($all_logs as $f){
-            $subDir = str_replace(DIR_LOGS, '', dirname($f).'/');
+        foreach ($all_logs as $f) {
+            $subDir = str_replace(DIR_LOGS, '', dirname($f) . '/');
             $fileShortName = $subDir . basename($f);
             $options[$fileShortName] = $fileShortName . ' ' . human_filesize(filesize($f));
         }
@@ -72,7 +77,7 @@ class ControllerPagesToolErrorLog extends AController
                 'type'    => 'selectbox',
                 'name'    => 'filename',
                 'options' => $options,
-                'value'   => $filename
+                'value'   => $filename,
             ]
         );
 
@@ -89,23 +94,33 @@ class ControllerPagesToolErrorLog extends AController
         );
         $this->document->addBreadcrumb(
             [
-                'href'      => $this->html->getSecureURL('tool/error_log', ($filename ? '&filename='.$filename : '')),
+                'href'      => $this->html->getSecureURL('tool/error_log', ($filename ? '&filename=' . $filename : '')),
                 'text'      => $heading_title,
                 'separator' => ' :: ',
                 'current'   => true,
             ]
         );
 
-        if (file_exists($file)) {
+        $isArchive = pathinfo($file, PATHINFO_EXTENSION) === 'gz';
+        $filesize = filesize($file);
+        if (file_exists($file) && $filesize && !$isArchive) {
             $fp = fopen($file, 'r');
             // check filesize
-            $filesize = filesize($file);
-            if ($filesize > 500000) {
-                $this->data['log'] = "\n\n\n\n###############################################################################################\n\n".
-                    strtoupper($this->language->get('text_file_tail')).DIR_LOGS."
-
-###############################################################################################\n\n\n\n";
-                fseek($fp, -500000, SEEK_END);
+            if ($filesize > self::VIEW_SIZE_LIMIT) {
+                $this->data['log'][''] =
+                    PHP_EOL
+                    . PHP_EOL
+                    . PHP_EOL
+                    . str_repeat('#', 100)
+                    . PHP_EOL
+                    . PHP_EOL
+                    . strtoupper($this->language->get('text_file_tail')) . DIR_LOGS
+                    . PHP_EOL
+                    . str_repeat('#', 100)
+                    . PHP_EOL
+                    . PHP_EOL
+                    . PHP_EOL;
+                fseek($fp, -self::VIEW_SIZE_LIMIT, SEEK_END);
                 fgets($fp);
             }
             $log = '';
@@ -113,8 +128,28 @@ class ControllerPagesToolErrorLog extends AController
                 $log .= fgets($fp);
             }
             fclose($fp);
+        } elseif ($isArchive) {
+            $log = ' File is GZIP archive. To view the content, please download the file and extract it.';
         } else {
             $log = '';
+        }
+        if ($log) {
+            $this->data['download_btn'] = $this->html->buildElement(
+                [
+                    'type'  => 'button',
+                    'name'  => 'download',
+                    'title' => $this->language->get('button_download'),
+                ]
+            );
+            $this->data['clear_btn'] =
+                $this->html->buildElement(
+                    [
+                        'name' => 'clear',
+                        'href' => $this->html->getSecureURL('tool/error_log/clearlog', '&filename=' . $filename),
+                        'text' => $this->language->get('button_clear'),
+                        'type' => 'button',
+                    ]
+                );
         }
 
         $log = htmlentities(str_replace(['<br/>', '<br />'], "\n", $log), ENT_QUOTES | ENT_IGNORE, 'UTF-8');
@@ -126,16 +161,17 @@ class ControllerPagesToolErrorLog extends AController
         foreach ($lines as $line) {
             if (preg_match('(^\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}:\d{2})', $line, $match)) {
                 $k++;
-                $data[$k] = str_replace($match[0], '<b>'.$match[0].'</b>', $line);
+                $data[$k] = str_replace($match[0], '<b>' . $match[0] . '</b>', $line);
             } else {
-                $data[$k] .= '<br>'.$line;
+                $data[$k] .= '<br>' . $line;
             }
         }
 
-        $this->data['log'] = $data;
+        $this->data['log'] += $data;
         $this->data['download_url'] = $this->html->getSecureURL('tool/error_log/download');
-        
+
         $this->view->batchAssign($this->data);
+        /** @see public_html/admin/view/default/template/pages/tool/error_log.tpl */
         $this->processTemplate('pages/tool/error_log.tpl');
 
         //update controller data
@@ -148,21 +184,32 @@ class ControllerPagesToolErrorLog extends AController
         //init controller data
         $this->extensions->hk_InitData($this, __FUNCTION__);
 
-        $filename = $this->request->get['filename'] ?: $this->config->get('config_error_filename');
-        $file = DIR_LOGS.$filename;
+        $filename = (string) $this->request->get['filename'];
+        if (!$filename) {
+            redirect($this->html->getSecureURL('tool/error_log'));
+        }
+        $file = DIR_LOGS . $filename;
 
-        if(is_file($file) && is_writable($file)) {
+        $base = realpath(DIR_LOGS);
+        $file = realpath($file);
+
+        if ($file === false || !str_starts_with($file, $base . DS)) {
+            redirect($this->html->getSecureURL('tool/error_log'));
+        }
+
+        if (is_writable($file)) {
             $handle = fopen($file, 'w+');
             fclose($handle);
             unlink($file);
             $this->session->data['success'] = $this->language->get('text_success');
-        }else{
+        } else {
             $this->session->data['error'] = $this->language->get('text_file_error');
         }
-        redirect($this->html->getSecureURL('tool/error_log', '&'.http_build_query(['filename' => $filename])));
 
         //update controller data
         $this->extensions->hk_UpdateData($this, __FUNCTION__);
+
+        redirect($this->html->getSecureURL('tool/error_log', '&' . http_build_query(['filename' => $filename])));
     }
 
     public function download()
@@ -177,13 +224,17 @@ class ControllerPagesToolErrorLog extends AController
 
         $this->loadLanguage('tool/error_log');
 
-        // Sanitize filename consistently with main() method
-        $filename = (string)$this->request->get['filename'];
-        $filename = str_replace(['../', '..\\', '\\'], '', $filename);
-
+        $filename = (string) $this->request->get['filename'];
         $file = DIR_LOGS . $filename;
 
-        if (!is_file($file) || !filesize($file)) {
+        $base = realpath(DIR_LOGS);
+        $file = realpath($file);
+
+        if ($file === false || !str_starts_with($file, $base . DS)) {
+            redirect($this->html->getSecureURL('tool/error_log'));
+        }
+
+        if (!filesize($file)) {
             $this->session->data['error'] = 'File not found or zero-length.';
             redirect($this->html->getSecureURL('tool/error_log', '&' . http_build_query(['filename' => $filename])));
             return;
@@ -191,7 +242,7 @@ class ControllerPagesToolErrorLog extends AController
 
         header('Content-Description: File Transfer');
         header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="' . basename(str_replace(DS,'_',$filename)));
+        header('Content-Disposition: attachment; filename="' . basename(str_replace(DS, '_', $filename)));
         header('Content-Transfer-Encoding: binary');
         header('Expires: 0');
         header('Cache-Control: must-revalidate, post-check=0, pre-check=0');

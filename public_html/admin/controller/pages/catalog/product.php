@@ -326,7 +326,7 @@ class ControllerPagesCatalogProduct extends AController
 
         $this->loadModel('catalog/manufacturer');
         $results = $this->model_catalog_manufacturer->getManufacturers(
-            ['store_id' => $this->session->data['current_store_id']]
+            ['store_id' => (int)$this->session->data['current_store_id']]
         );
         $this->data['brands'] = ['' => $this->language->get('text_select_brand')]
             + array_column($results, 'name', 'manufacturer_id');
@@ -377,10 +377,11 @@ class ControllerPagesCatalogProduct extends AController
                 'type'        => 'selectbox',
                 'name'        => 'status',
                 'value'       => $search_params['status'],
-                'placeholder' => $this->language->get('text_select_status'),
+                'title' => $this->language->get('text_select_status'),
                 'options'     => [
-                    1 => $this->language->get('text_enabled'),
-                    0 => $this->language->get('text_disabled'),
+                    '' => $this->language->get('text_all'),
+                    1  => $this->language->get('text_enabled'),
+                    0  => $this->language->get('text_disabled'),
                 ],
             ]
         );
@@ -922,44 +923,58 @@ class ControllerPagesCatalogProduct extends AController
             ]
         );
 
-        $this->data['currency'] = $this->currency->getCurrency($this->config->get('config_currency'));
         $this->data['form']['fields']['data']['price'] = $form->getFieldHtml(
             [
-                'type'  => 'input',
-                'name'  => 'price',
-                'value' => moneyDisplayFormat($this->data['price']),
+                'type'     => 'slot',
+                'name'     => 'price',
+                'template' => 'pages/catalog/product_form_price.tpl',
+                'data'     =>
+                    [
+                        'currency'             => $this->currency->getCurrency($this->config->get('config_currency')),
+                        'price'                => $form->getFieldHtml(
+                            [
+                                'type'  => 'input',
+                                'name'  => 'price',
+                                'value' => moneyDisplayFormat($this->data['price']),
+                            ]
+                        ),
+                        'entry_tax_rule'       => $this->html->buildElement(
+                            [
+                                'name'   => 'tax_rule',
+                                'type'   => "button",
+                                'href'   => $this->html->getSecureURL('localisation/tax_class'),
+                                'text'   => $this->language->get('entry_tax_rule'),
+                                'target' => '_blank',
+                                'style'  => ' ',
+                            ]
+                        ),
+                        'tax_selector'         => $form->getFieldHtml(
+                            [
+                                'type'    => 'selectbox',
+                                'name'    => 'tax_selector',
+                                'value'   => $this->data['tax_class_id'] ?? $this->config->get('config_tax_class_id'),
+                                'options' => $this->data['tax_classes'],
+                                'style'   => 'no-save',
+                            ]
+                        ),
+                        'entry_price_with_tax' => $this->language->get('entry_price_with_tax'),
+                        'price_with_tax'       => $form->getFieldHtml(
+                            [
+                                'type'  => 'input',
+                                'name'  => 'price_with_tax',
+                                'value' => '',
+                                'style' => 'no-save',
+                            ]
+                        ),
+                        /** @see ControllerResponsesProductProduct::getTaxPrice */
+                        'price_calc_url'       => $this->html->getSecureURL(
+                            'r/product/product/getTaxPrice',
+                            '&product_id=' . $this->request->get['product_id']
+                        ),
+                    ],
             ]
         );
-        $this->data['form']['tax_selector'] = $form->getFieldHtml(
-            [
-                'type'    => 'selectbox',
-                'name'    => 'tax_selector',
-                'value'   => $this->data['tax_class_id'] ?? $this->config->get('config_tax_class_id'),
-                'options' => $this->data['tax_classes'],
-                'style'   => 'no-save',
-            ]
-        );
-        $this->data['entry_tax_rule'] =
-            $this->html->buildElement(
-                [
-                    'type'   => "button",
-                    'href'   => $this->html->getSecureURL('localisation/tax_class'),
-                    'text'   => $this->language->get('entry_tax_rule'),
-                    'target' => '_blank',
-                    'style'  => ' ',
-                ]
-            );
 
-        $this->data['entry_price_with_tax'] = $this->language->get('entry_price_with_tax');
-        $this->data['form']['price_with_tax'] = $form->getFieldHtml(
-            [
-                'type'  => 'input',
-                'name'  => 'price_with_tax',
-                'value' => '',
-                'style' => 'no-save',
-            ]
-        );
-        $this->data['price_calc_url'] = $this->html->getSecureURL('r/product/product/getTaxPrice');
         $this->data['form']['fields']['data']['cost'] = $form->getFieldHtml(
             [
                 'type'  => 'input',
@@ -1117,7 +1132,7 @@ class ControllerPagesCatalogProduct extends AController
             ]
         );
 
-        $this->data['form']['fields']['data']['shipping'] = $form->getFieldHtml(
+        $this->data['form']['fields']['shipping']['shipping'] = $form->getFieldHtml(
             [
                 'type'  => 'checkbox',
                 'name'  => 'shipping',
@@ -1126,7 +1141,7 @@ class ControllerPagesCatalogProduct extends AController
             ]
         );
 
-        $this->data['form']['fields']['data']['free_shipping'] = $form->getFieldHtml(
+        $this->data['form']['fields']['shipping']['free_shipping'] = $form->getFieldHtml(
             [
                 'type'  => 'checkbox',
                 'name'  => 'free_shipping',
@@ -1135,7 +1150,7 @@ class ControllerPagesCatalogProduct extends AController
             ]
         );
 
-        $this->data['form']['fields']['data']['ship_individually'] = $form->getFieldHtml(
+        $this->data['form']['fields']['shipping']['ship_individually'] = $form->getFieldHtml(
             [
                 'type'  => 'checkbox',
                 'name'  => 'ship_individually',
@@ -1144,7 +1159,7 @@ class ControllerPagesCatalogProduct extends AController
             ]
         );
 
-        $this->data['form']['fields']['data']['shipping_price'] = $form->getFieldHtml(
+        $this->data['form']['fields']['shipping']['shipping_price'] = $form->getFieldHtml(
             [
                 'type'  => 'input',
                 'name'  => 'shipping_price',
@@ -1157,7 +1172,7 @@ class ControllerPagesCatalogProduct extends AController
             $this->data['length_classes'][0] = $this->language->get('text_none');
         }
 
-        $this->data['form']['fields']['data']['dimensions'] = $form->getFieldHtml(
+        $this->data['form']['fields']['shipping']['dimensions'] = $form->getFieldHtml(
             [
                 'type'     => 'slot',
                 'name'     => 'dimensions',
@@ -1194,9 +1209,9 @@ class ControllerPagesCatalogProduct extends AController
                     'length_class' => $form->getFieldHtml(
                         [
                             'type'    => 'selectbox',
-                            'name'    => 'length_class',
+                            'name'    => 'length_class_id',
                             'title'   => $this->language->get('entry_length_class'),
-                            'value'   => $this->data['length_class'],
+                            'value'   => $this->data['length_class_id'],
                             'options' => $this->data['length_classes'],
                             'attr'    => ' autocomplete="false"',
                             'style'   => 'tiny-field',
@@ -1228,7 +1243,7 @@ class ControllerPagesCatalogProduct extends AController
             $this->data['weight_class_id'] = 0;
         }
 
-        $this->data['form']['fields']['data']['weight'] = $form->getFieldHtml(
+        $this->data['form']['fields']['shipping']['weight'] = $form->getFieldHtml(
             [
                 'type'  => 'input',
                 'name'  => 'weight',
@@ -1238,7 +1253,7 @@ class ControllerPagesCatalogProduct extends AController
             ]
         );
 
-        $this->data['form']['fields']['data']['weight_class'] = $form->getFieldHtml(
+        $this->data['form']['fields']['shipping']['weight_class'] = $form->getFieldHtml(
             [
                 'type'    => 'selectbox',
                 'name'    => 'weight_class_id',

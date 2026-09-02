@@ -138,8 +138,8 @@ final class AUser
     private function _user_init()
     {
 
-        $this->db->query("SET @USER_ID = '".$this->user_id."';");
-        $this->db->query("UPDATE ".$this->db->table("users")." 
+        $this->db->_query("SET @USER_ID = '".$this->user_id."';");
+        $this->db->_query("UPDATE ".$this->db->table("users")." 
             SET ip = '".$this->db->escape($this->request->getRemoteIP())."'
             WHERE user_id = '".$this->user_id."';");
 
@@ -155,7 +155,7 @@ final class AUser
 
     private function _update_last_login()
     {
-        $this->db->query("UPDATE ".$this->db->table("users")." 
+        $this->db->_query("UPDATE ".$this->db->table("users")." 
             SET last_login = NOW()
             WHERE user_id = '".$this->user_id."';");
     }

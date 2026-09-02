@@ -99,16 +99,16 @@ class ControllerResponsesExtensionDefaultAuthorizeNet extends AController
                 $output
             );
         }
-        
+
         $this->loadLanguage('default_authorizenet/default_authorizenet');
         //init controller data
         $this->extensions->hk_InitData($this, __FUNCTION__);
-        
+
         $post = $this->request->post;
 
         /** @var ModelCheckoutOrder $mdl */
         $mdl = $this->loadModel('checkout/order');
-        
+
         $orderId = (int) $this->session->data['order_id'];
         $orderInfo = $mdl->getOrder($orderId);
         if (!$orderInfo || !$orderId) {
@@ -128,17 +128,17 @@ class ControllerResponsesExtensionDefaultAuthorizeNet extends AController
 
         try {
             $paymentData = array_merge(
-                $orderInfo,                
+                $orderInfo,
                 [
                     'amount'             => $amount,
                     'currency'           => $currency,
                     'cc_owner_firstname' => html_entity_decode($orderInfo['payment_firstname'], ENT_QUOTES, 'UTF-8'),
                     'cc_owner_lastname'  => html_entity_decode($orderInfo['payment_lastname'], ENT_QUOTES, 'UTF-8'),
                     'dataDescriptor'     => $post['dataDescriptor'],
-                    'dataValue'          => $post['dataValue']
+                    'dataValue'          => $post['dataValue'],
                 ],
                 //allow passing data from hooks
-                (array)$this->data['payment_data']
+                (array) $this->data['payment_data']
             );
             $this->data['payment_data'] = $paymentData;
 
@@ -148,40 +148,40 @@ class ControllerResponsesExtensionDefaultAuthorizeNet extends AController
             $output['success'] = $this->html->getSecureURL('checkout/finalize');
             ADebug::variable('Processing payment result: ', $this->data['transaction_details']);
 
-            $responseCode = $transactionDetails['responseCode'];
             //update transaction details in the order table
+            $paymentMethodData = array_merge($transactionDetails, $post);
             $this->db->query(
-                "UPDATE ".$this->db->table('orders')."
-                    SET payment_method_data = '".$this->db->escape(serialize($transactionDetails))."'
-                    WHERE order_id = '".(int) $orderId."'"
+                "UPDATE " . $this->db->table('orders') . "
+                SET payment_method_data = '" . $this->db->escape(serialize($paymentMethodData)) . "'
+                WHERE order_id = '" . $orderId . "'"
             );
-            
-            //we allow only 1 = Approved & 4 = Held for Review
-            if (in_array((int)$responseCode, [1,4])) {                
-                $orderStatusId = 
-                    $responseCode == 4 
-                    //when hold for review
-                    ? $this->order_status->getStatusByTextId('pending')
-                    : $this->config->get('default_authorizenet_status_success_settled');
 
-                $comment = str_contains($paymentData['shipping_method_key'],'pickup') 
-                        ?
-                        'You will be contacted by an account representative '
-                        . 'when your order is available for pickup.'
+            $responseCode = $transactionDetails['responseCode'];
+            //we allow only 1 = Approved & 4 = Held for Review
+            if (in_array((int) $responseCode, [1, 4])) {
+                $orderStatusId =
+                    $responseCode == 4
+                        //when hold for review
+                        ? $this->order_status->getStatusByTextId('pending')
+                        : $this->config->get('default_authorizenet_status_success_settled');
+
+                $comment = str_contains($paymentData['shipping_method_key'], 'pickup')
+                    ? 'You will be contacted by an account representative '
+                    . 'when your order is available for pickup.'
                     : '';
                 $output['paid'] = true;
-                $mdl->confirm( $orderId, $orderStatusId, $comment );
+                $mdl->confirm($orderId, $orderStatusId, $comment);
             } else {
                 // Some other error, assume payment declined
-                $output['error_text'] = $transactionDetails['description'].'(ResponseCode:'.$responseCode.')';
-            }        
-        }catch(Exception $e){
+                $output['error_text'] = $transactionDetails['description'] . '(ResponseCode:' . $responseCode . ')';
+            }
+        } catch (Exception $e) {
             $output['error_text'] = $e->getMessage();
             $errorCode = $e->getCode();
             if ($errorCode) {
                 $output['error_text'] .= ' (' . $errorCode . ')';
             }
-            $this->log->write($output['error_text'].PHP_EOL.$e->getTraceAsString());
+            $this->log->write($output['error_text'] . PHP_EOL . $e->getTraceAsString());
         }
 
         //update controller data

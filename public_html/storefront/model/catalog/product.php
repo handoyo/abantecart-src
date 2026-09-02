@@ -52,16 +52,16 @@ class ModelCatalogProduct extends Model
         $languageId = (int) $this->config->get('storefront_language_id');
 
         $query = $this->db->query(
-            "SELECT DISTINCT p.*,
+            "SELECT DISTINCT *,
                         pd.name AS name,
                         pd.blurb AS blurb,
                         m.name AS manufacturer,
                         ss.name AS stock_status,
                         stock_checkout,
-                        lcd.unit as length_class_name, " . PHP_EOL .
-            $this->_sql_avg_rating_string() . ", " .
-            $this->_sql_final_price_string() . " " .
-            $this->_sql_join_string() . PHP_EOL
+                        lcd.unit as length_class_name, " . PHP_EOL
+            . $this->_sql_avg_rating_string() . ", "
+            . $this->_sql_final_price_string() . ", p.product_id "
+            . $this->_sql_join_string() . PHP_EOL
             . " LEFT JOIN " . $this->db->table("length_class_descriptions") . " lcd
                 ON (p.length_class_id = lcd.length_class_id
                     AND lcd.language_id = " . $languageId . ")
@@ -73,7 +73,7 @@ class ModelCatalogProduct extends Model
     }
 
     /**
-     * Check if product or any option value require tracking stock subtract = 1
+     * Check if a product or any option value require tracking stock subtract = 1
      *
      * @param int $product_id
      *
@@ -1535,9 +1535,9 @@ class ModelCatalogProduct extends Model
                         pd.name AS name,
                         m.name AS manufacturer,
                         ss.name AS stock,
-                        " . $this->_sql_avg_rating_string() . ", " .
-                $this->_sql_review_count_string() .
-                $this->_sql_join_string() . "
+                        " . $this->_sql_avg_rating_string() . ", "
+                . $this->_sql_review_count_string()
+                . $this->_sql_join_string() . "
                 WHERE p.product_id = '" . (int) $result['related_id'] . "'
                     AND p2s.store_id = '" . (int) $this->config->get('config_store_id') . "'
                     AND p.date_available <= NOW() 
@@ -2340,5 +2340,26 @@ class ModelCatalogProduct extends Model
             return 'NOT IN';
         }
         return 'IN';
+    }
+
+    public function saveSettings(int $product_id, $settings)
+    {
+        if (!$settings) {
+            return;
+        }
+
+        $priorSettings = $this->db->query(
+            "SELECT settings 
+             FROM " . $this->db->table("products") . " 
+             WHERE product_id = " . $product_id
+        )->row['settings'];
+        $priorSettings = unserialize($priorSettings) ? : [];
+        $settings = is_serialized($settings) ? unserialize($settings) : $settings;
+        $newSettings = array_merge($priorSettings, $settings);
+        $this->db->query(
+            "UPDATE " . $this->db->table("products") . "
+             SET settings = '" . $this->db->escape(serialize($newSettings)) . "'
+             WHERE product_id = " . $product_id
+        );
     }
 }

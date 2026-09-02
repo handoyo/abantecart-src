@@ -7,6 +7,9 @@
     <div class="mb-3">
         <input type="hidden" name="dataValue" id="dataValue"/>
         <input type="hidden" name="dataDescriptor" id="dataDescriptor"/>
+        <input type="hidden" name="cc_number" id="cc_number"/>
+        <input type="hidden" name="bin" id="bin"/>
+        <input type="hidden" name="expDate" id="expDate"/>
     </div>
     <?php
     echo $this->getHookVar('payment_table_post'); ?>
@@ -32,33 +35,36 @@
 </div>
 
 <script type="text/javascript">
-    $(document).ready( function () {
-        loadScript("<?php echo $acceptUiUrl;?>",
-            function () {
-                //validate submit
-                $('#<?php echo $submit->name ?>').on('click', function () {
-                    let form = $(this).parents('form');
-                    if (!validateForm(form)) {
-                        form.addClass('was-validated');
-                        try {
-                            resetLockedButton($(this));
-                        } catch (e) {}
-                        return false;
-                    }
-                    $('.alert').remove();
-                    $('#anetBtn').click();                    
-                    return true;
-                });
-            }
-        );
+    window.anetSubmitted = false;
+    $(document).ready(function () {
+        loadScript("<?php echo $acceptUiUrl;?>", paymentSubmitHandler);
     });
+
+    function paymentSubmitHandler() {
+        //validate submit
+        $(document).off('click', '#<?php echo $submit->name ?>')
+            .on('click', '#<?php echo $submit->name ?>', function () {
+                let form = $('#<?php echo $form_open->name;?>');
+                if (!validateForm(form)) {
+                    form.addClass('was-validated');
+                    try {
+                        resetLockedButton($(this));
+                    } catch (e) {
+                    }
+                    return false;
+                }
+                $('.alert').remove();
+                $('#anetBtn').click();
+                return false;
+            });
+    }
 
     function responseHandler(response) {
         if (response.messages.resultCode === "Error") {
             let i = 0;
             let alert = '';
             while (i < response.messages.message.length) {
-                alert = '<div class="alert alert-warning"><i class="fa fa-exclamation-triangle me-3"></i>'
+                alert = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-3"></i>'
                     + 'AuthorizeNet: '
                     + response.messages.message[i].text
                     + '( ' + response.messages.message[i].code + ' )</div>';
@@ -66,55 +72,69 @@
                 i++;
             }
             scrollToElementTop('#<?php echo $form_open->name?>');
-            try { 
-                resetLockedButton($('#<?php echo $submit->name ?>')); 
-            }
-            catch (e) {
+            try {
+                resetLockedButton($('#<?php echo $submit->name ?>'));
+            } catch (e) {
                 console.log(e);
             }
         } else {
-            paymentFormUpdate(response.opaqueData);
+            paymentFormUpdate(response.opaqueData, response.encryptedCardData || {});
         }
     }
 
-    function paymentFormUpdate(opaqueData) {
+    function paymentFormUpdate(opaqueData, cardData) {
+        const form = $('#<?php echo $form_open->name ?>');
         scrollToElementTop('#<?php echo $form_open->name?>');
         $("#dataDescriptor").val(opaqueData.dataDescriptor);
         $("#dataValue").val(opaqueData.dataValue);
-        confirmSubmit($('#authorizenet'), <?php js_echo($callback_url);?>);
+        $("#cc_number").val(cardData.cardNumber);
+        $("#bin").val(cardData.bin);
+        $("#expDate").val(cardData.expDate || '');
+        confirmSubmit(form, <?php js_echo($callback_url);?>);
     }
 
     function confirmSubmit(formElm, url) {
+        if (window.anetSubmitted) return;
         $.ajax(
             {
                 type: 'POST',
                 url: url,
                 data: formElm.serialize(),
                 dataType: 'json',
+                beforeSend: function () {
+                    window.anetSubmitted = true;
+                },
                 success: function (data) {
                     if (!data) {
-                        formElm.before('<div class="alert alert-warning"><i class="fa fa-bug me-2"></i>' +
-                        <?php js_echo($error_unknown); ?>
-                            + '</div>'
+                        formElm.before('<div class="alert alert-warning"><i class="bi bi-bug me-2"></i>' +
+                            <?php js_echo($error_unknown); ?>
+                            +'</div>'
                         );
-                        try { resetLockedButton($('#<?php echo $submit->name ?>')); } catch (e) {
+                        try {
+                            resetLockedButton($('#<?php echo $submit->name ?>'));
+                        } catch (e) {
                             console.log(e);
                         }
                     } else if (data.success) {
-                        location = data.success;                       
+                        location = data.success;
                     }
                 },
                 error: function (jqXHR, textStatus, errorThrown) {
                     jqXHR.responseJSON
-                    formElm.before(
-                        '<div class="alert alert-warning"><i class="fa fa-exclamation-triangle me-2"></i>'
-                        + jqXHR.responseJSON.error_text 
+                    $('#<?php echo $submit->name ?>').parent().parent().before(
+                        '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-2"></i>'
+                        + jqXHR.responseJSON.error_text
                         + '</div>'
                     );
                     updateCsrfTokens(formElm, jqXHR.responseJSON);
-                    try { resetLockedButton($('#<?php echo $submit->name ?>')); } catch (e) {
+                    try {
+                        resetLockedButton($('#<?php echo $submit->name ?>'));
+                    } catch (e) {
                         console.log(e);
                     }
+                },
+                complete: function () {
+                    window.anetSubmitted = false;
                 }
             }
         );

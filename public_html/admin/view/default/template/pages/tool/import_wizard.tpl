@@ -113,9 +113,16 @@
                                         if (!$import_ready) {
                                             //see if we can match colums based on the name
                                             $col_name = trim(preg_replace('/[0-9]+/', '', $col));
-                                            if(	strtolower($col_name) == $cname
+                                            $col_name_l = strtolower($col_name);
+                                            $aliases = [];
+                                            if (!empty($det['aliases']) && is_array($det['aliases'])) {
+                                                $aliases = array_map('strtolower', $det['aliases']);
+                                            } elseif (!empty($det['alias'])) {
+                                                $aliases = [strtolower($det['alias'])];
+                                            }
+                                            if(	$col_name_l == $cname
                                                 || strtolower(preg_replace('/\s+/', '.', $col_name)) == $cname
-                                                || strtolower($col_name) == $det['alias']
+                                                || in_array($col_name_l, $aliases, true)
                                             ) {
                                                 $selected = 'selected';
                                             }

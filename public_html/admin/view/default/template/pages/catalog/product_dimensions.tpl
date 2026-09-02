@@ -1,6 +1,6 @@
 <div class="product-dimensions product-dimensions-flex value">
 	<div class="product-dimensions-item text-nowrap">
-		<?php echo $data['length']->title; ?>
+        <label class="mb0"><?php echo $data['length']->title; ?></label>
 	</div>
     <div class="product-dimensions-item afield">
 		<?php
@@ -9,7 +9,7 @@
 	</div>
     <b class="fa-2x">&Cross;</b>
 	<div class="product-dimensions-item">
-		<?php echo $data['width']->title; ?>
+        <label class="mb0"><?php echo $data['width']->title; ?></label>
 	</div>
     <div class="product-dimensions-item afield">
 		<?php
@@ -18,7 +18,7 @@
 	</div>
     <b class="fa-2x">&Cross;</b>
 	<div class="product-dimensions-item">
-		<?php echo $data['height']->title; ?>
+        <label class="mb0"><?php echo $data['height']->title; ?></label>
 	</div>
 	<div class="product-dimensions-item afield">
 		<?php

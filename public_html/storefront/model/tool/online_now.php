@@ -38,7 +38,7 @@ class ModelToolOnlineNow extends Model
 
         $this->deleteOld();
         //insert new record
-        $result = $this->db->query(
+        $result = $this->db->_query(
                     "INSERT INTO `".$this->db->table("online_customers")."`
                             ( `ip`, `customer_id`, `url`, `referer`, `date_added` )
                             VALUES (
@@ -57,7 +57,7 @@ class ModelToolOnlineNow extends Model
                         `referer` = '".$this->db->escape($referer)."',
                         `date_added` = NOW()
                     WHERE `ip` = '".$this->db->escape($ip)."'";
-            $this->db->query($sql);
+            $this->db->_query($sql);
         }
         $this->session->data['marked_as_online'] = time();
     }
@@ -67,7 +67,7 @@ class ModelToolOnlineNow extends Model
         $cache = $this->cache->pull($cache_key);
         if(!$cache || (time()-$cache) > 3600 ){
             //delete old records
-            $this->db->query("DELETE FROM `".$this->db->table("online_customers")."`
+            $this->db->_query("DELETE FROM `".$this->db->table("online_customers")."`
                               WHERE `date_added`< (NOW() - INTERVAL 1 HOUR)");
             $this->cache->push($cache_key, time());
         }

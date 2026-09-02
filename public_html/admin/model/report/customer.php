@@ -436,8 +436,7 @@ class ModelReportCustomer extends Model
 
     public function clearOnlineCustomers()
     {
-
         $sql = "DELETE FROM ".$this->db->table("online_customers");
-        $this->db->query($sql);
+        $this->db->_query($sql);
     }
 }

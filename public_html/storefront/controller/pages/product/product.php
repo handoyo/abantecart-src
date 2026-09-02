@@ -19,8 +19,8 @@
  */
 
 /** @noinspection PhpUnused */
-/** @noinspection PhpMultipleClassDeclarationsInspection */
 
+/** @noinspection PhpMultipleClassDeclarationsInspection */
 class ControllerPagesProductProduct extends AController
 {
     protected $routes = [];
@@ -57,7 +57,7 @@ class ControllerPagesProductProduct extends AController
         }
 
         $product_info = $pMdl->getProduct($product_id);
-        //can not locate product? get out
+        //cannot locate a product? get out
         if (!$product_info) {
             $this->_product_not_found($product_id);
             return;
@@ -467,7 +467,8 @@ class ControllerPagesProductProduct extends AController
                 $default_value = $option_value['default'] && !$default_value
                     ? $optionValueId
                     : $default_value;
-                // for case when trying to add to cart without required options. we get option-array back inside _GET
+                // for case when trying to add to the cart without required options.
+                // we get the option-array back inside _GET
                 if (has_value($request['option'][$optionId])) {
                     $default_value = $request['option'][$optionId];
                 }
@@ -485,10 +486,10 @@ class ControllerPagesProductProduct extends AController
 
                 //Stock and status
                 $opt_stock_message = '';
-                //if options has stock tracking and not allowed to be purchased out of stock
+                //if options have stock tracking and not allowed to be purchased out of stock
                 if ($option_value['subtract'] && !$product_info['stock_checkout']) {
                     if ($option_value['quantity'] <= 0) {
-                        //show out of stock message
+                        //show out-of-stock message
                         $opt_stock_message = $this->language->get('text_out_of_stock');
                         $disabled_values[] = $optionValueId;
                     } elseif ($this->config->get('config_stock_display')) {
@@ -557,7 +558,7 @@ class ControllerPagesProductProduct extends AController
 
             $option_data = [];
 
-            //if not values are build, nothing to show
+            //if values do not build, nothing to show
             if (count($values)) {
                 $value = '';
                 $data_attr = html_entity_decode($optionSettings['html_attributes']) . ' ';
@@ -638,7 +639,7 @@ class ControllerPagesProductProduct extends AController
 
                 $options[] = [
                     'name' => $option['name'],
-                    'html' => $this->html->buildElement($option_data),  // not a string!!! it's object!
+                    'html' => $this->html->buildElement($option_data),
                 ];
             }
             // main product image
@@ -678,7 +679,7 @@ class ControllerPagesProductProduct extends AController
                         'width'  => $this->config->get('config_image_additional_width'),
                         'height' => $this->config->get('config_image_additional_height'),
                     ],
-                //product image zoom related thumbnail
+                //product image zoom-related thumbnail
                 'thumb2' =>
                     [
                         'width'  => $this->config->get('config_image_thumb_width'),
@@ -704,7 +705,7 @@ class ControllerPagesProductProduct extends AController
         //handle stock messages
         // if track stock is off. no messages needed.
         if ($pMdl->isStockTrackable($product_id)) {
-            //NOTE: total quantity can be integer and true(in case stock-track is off)
+            //NOTE: total quantity can be integer and true (in case stock-track is off)
             $total_quantity = $pMdl->hasAnyStock($product_id);
             $this->data['track_stock'] = true;
             //out of stock if no quantity and no stock checkout is disabled
@@ -718,7 +719,7 @@ class ControllerPagesProductProduct extends AController
                 $this->data['in_stock'] = true;
                 $this->data['stock'] = '';
                 if ($this->config->get('config_stock_display') && $total_quantity > 0) {
-                    //if not tracked - show nothing
+                    //if not tracked, show nothing
                     $this->data['stock'] = $total_quantity !== true ? $total_quantity . ' ' : '';
                 }
                 if ($total_quantity <= 0) {
@@ -728,7 +729,7 @@ class ControllerPagesProductProduct extends AController
                 }
             }
 
-            //check if we need to disable product for no stock
+            //check if we need to disable product with no stock
             if ($this->config->get('config_nostock_autodisable') && $total_quantity <= 0) {
                 //set available data
                 $pd_identifiers = "ID: " . $product_id;
@@ -807,6 +808,8 @@ class ControllerPagesProductProduct extends AController
         } else {
             $this->data['images'] = $option_images['images'];
         }
+
+        $this->data['product_media'] = $this->prepareProductMedia($product_id);
 
         $products = [];
         $results = $pMdl->getProductRelated($product_id);
@@ -1023,6 +1026,58 @@ class ControllerPagesProductProduct extends AController
 
         $this->view->batchAssign($this->data);
         $this->processTemplate();
+    }
+
+    /**
+     * Load non-image product resources for storefront media tabs.
+     *
+     * @param int $product_id
+     *
+     * @return array
+     * @throws AException
+     */
+    protected function prepareProductMedia(int $product_id): array
+    {
+        $mediaTypes = [
+            'audio'   => [
+                'icon'  => 'fa-solid fa-music',
+                'title' => $this->language->get('tab_audio'),
+            ],
+            'video'   => [
+                'icon'  => 'fa-solid fa-video',
+                'title' => $this->language->get('tab_video'),
+            ],
+            'pdf'     => [
+                'icon'  => 'fa-solid fa-file-pdf',
+                'title' => $this->language->get('tab_pdf'),
+            ],
+            'archive' => [
+                'icon'  => 'fa-solid fa-file-zipper',
+                'title' => $this->language->get('tab_archive'),
+            ],
+        ];
+
+        $productMedia = [];
+        foreach ($mediaTypes as $type => $meta) {
+            $rl = new AResource($type);
+            $sizes = ['orig' => [], 'main' => null, 'thumb' => null, 'thumb2' => []];
+            $resources = $rl->getResourceAllObjects('products', $product_id, $sizes, 0, false);
+            if (!$resources) {
+                continue;
+            }
+
+            // getResourceAllObjects returns a single associative array when only one item exists
+            if (isset($resources['origin']) || isset($resources['resource_id'])) {
+                $resources = [$resources];
+            }
+            $productMedia[$type] = [
+                'title'     => $meta['title'],
+                'icon'      => $meta['icon'],
+                'resources' => array_values($resources),
+            ];
+        }
+
+        return $productMedia;
     }
 
     /**

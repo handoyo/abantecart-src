@@ -2,9 +2,9 @@
     <tr>
         <td>
             <div class="input-group afield">
-                <div class="input-group-addon"><?php echo $currency['symbol_left']; ?></div>
-                <?php echo $field; ?>
-                <div class="input-group-addon"><?php echo $currency['symbol_right']; ?></div>
+                <div class="input-group-addon"><?php echo $data['currency']['symbol_left']; ?></div>
+                <?php echo $data['price']; ?>
+                <div class="input-group-addon"><?php echo $data['currency']['symbol_right']; ?></div>
             </div>
         </td>
         <td>
@@ -13,18 +13,18 @@
         <td>
             <div class="input-group">
                 <div class="input-group-addon">
-                    <?php echo $entry_tax_rule; ?>
+                    <?php echo $data['entry_tax_rule']; ?>
                 </div>
-                <?php echo $form['tax_selector']; ?>
+                <?php echo $data['tax_selector']; ?>
             </div>
         </td>
         <td><b class="fa-2x ml10 mr10">&equals;</b></td>
         <td>
             <div class="input-group">
-                <div class="input-group-addon"><?php echo $entry_price_with_tax; ?></div>
-                <div class="input-group-addon"><?php echo $currency['symbol_left']; ?></div>
-                <?php echo $form['price_with_tax']; ?>
-                <div class="input-group-addon"><?php echo $currency['symbol_right']; ?></div>
+                <div class="input-group-addon"><?php echo $data['entry_price_with_tax']; ?></div>
+                <div class="input-group-addon"><?php echo $data['currency']['symbol_left']; ?></div>
+                <?php echo $data['price_with_tax']; ?>
+                <div class="input-group-addon"><?php echo $data['currency']['symbol_right']; ?></div>
             </div>
         </td>
     </tr>
@@ -56,47 +56,40 @@
         }, waitTime);
     }
 
-    function getTaxedPrice(initiator) {
+    function getTaxedPrice(initiator, sendData = {}) {
         let priceElm = $('input[name="price"]');
-        let priceWithTaxElm = $('input[name="price_with_tax"]');
-        let precision = 0;
+        
         if (initiator.attr('name') === 'tax_selector') {
             initiator = priceElm;
         }
-        if (initiator.val().length > 0) {
-            let arr = initiator.val().split('.');
-            let end = arr.length>1 ? initiator.val().split('.').slice(-1)[0] : 0;
-            precision = end.length > precision ? end.length : precision;
-        }
-        numberSeparators = {precision: precision, dec_point: '.', thousands_point: null};
+        let currentValue = initiator.val();
+        currentValue = currentValue.replace(/[^0-9.]/g, '');
+        currentValue = currentValue === '' || currentValue === null  ? '0.00' : currentValue;
+        initiator.val(currentValue);
 
-        formatPrice(priceElm.get(0));
-        formatPrice(priceWithTaxElm.get(0));
-
-        let value = '&' + initiator.attr('name') + '=' + initiator.val();
-        if (initiator.val() !== null && initiator.val() !== '') {
-
-            $.get(
-                '<?php echo $price_calc_url?>' + value + '&tax_class_id=' + $('select[name="tax_selector"]').val(),
-                function (res) {
-                    if (initiator.attr('name') === 'price') {
-                        priceWithTaxElm.val(res);
-                        formatPrice(priceWithTaxElm.get(0), <?php echo (int)$currency['decimal_place']; ?>);
-                    } else {
-                        priceElm.val(res);
-                        formatPrice(priceElm.get(0), <?php echo (int)$currency['decimal_place']; ?>);
-                        priceElm.aform().change();
+        sendData[initiator.attr('name')] = currentValue;
+        sendData['tax_class_id'] = $('select[name="tax_selector"]').val();
+        let urlParams = new URLSearchParams(sendData).toString();
+        let value = urlParams ? '&' + urlParams : '';
+        $.get(
+            '<?php echo $data['price_calc_url']?>' + value,
+            function (res) {
+                // Parse JSON response if it's a string
+                let data = typeof res === 'string' ? JSON.parse(res) : res;
+                $.each(data, function (key, value) {
+                    if ($('[name="' + key + '"]').length > 0) {
+                        $('[name="' + key + '"]').val(value).aform().change();
                     }
-                }
-            );
-        }
+                });
+            }
+        );
     }
 
     $(document).ready(function () {
         let price = $('input[name="price"]');
         let p = price.val();
         if (p !== '' && p !== '0.0' && p !== '0.00') {
-            getTaxedPrice(price, price);
+            getTaxedPrice(price);
         }
     });
 </script>

@@ -401,6 +401,86 @@ if ($error){ ?>
                     </div>
                 </div>
 <?php }
+if (!empty($product_media)) {
+    foreach ($product_media as $mediaType => $media) {
+        $mediaId = preg_replace('/[^a-z0-9_]/i', '', $mediaType);
+        $mediaTitle = $media['title'];
+        $mediaIcon = $media['icon'];
+        $mediaResources = (array)$media['resources'];
+        $resTitle = $res['title'] ?: ($res['name'] ?? $mediaTitle);
+        $resUrl = ($res['direct_url'] ?? '') ?: ($res['main_url'] ?? '');
+        $isExternal = ($res['origin'] ?? '') === 'external';
+    ?>
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingMedia<?php echo $mediaId; ?>">
+                        <button id="media_<?php echo $mediaId; ?>" class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseMedia<?php echo $mediaId; ?>"
+                                aria-expanded="false" aria-controls="collapseMedia<?php echo $mediaId; ?>">
+                            <i class="<?php echo $mediaIcon; ?> me-2"></i>
+                            <?php echo $mediaTitle; ?> (<?php echo count($mediaResources); ?>)
+                        </button>
+                    </h2>
+                    <div id="collapseMedia<?php echo $mediaId; ?>" class="accordion-collapse collapse"
+                         aria-labelledby="headingMedia<?php echo $mediaId; ?>"
+                         data-bs-parent="#productDetailsAccordion">
+                        <div class="accordion-body">
+                            <ul class="list-group list-unstyled list-inline ">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center col-12">
+                                        <?php if ($isExternal && !empty($res['main_html'])) { ?>
+                                            <div class="w-100">
+                                                <div class="product-media-embed mb-2"><?php echo $res['main_html']; ?></div>
+                                                <?php if ($resTitle) { ?>
+                                                    <div class="fs-5 fw-bolder"><?php echo $resTitle; ?></div>
+                                                <?php } ?>
+                                            </div>
+                                        <?php } elseif ($mediaType === 'audio' && $resUrl) { ?>
+                                            <div class="w-100">
+                                                <?php if ($resTitle) { ?>
+                                                    <div class="fs-5 fw-bolder mb-2"><?php echo $resTitle; ?></div>
+                                                <?php } ?>
+                                                <audio class="w-100" controls preload="none" src="<?php echo $resUrl; ?>">
+                                                    <a href="<?php echo $resUrl; ?>" target="_blank" rel="noopener">
+                                                        <?php echo $text_download_resource; ?>
+                                                    </a>
+                                                </audio>
+                                            </div>
+                                        <?php } elseif ($mediaType === 'video' && $resUrl) { ?>
+                                            <div class="w-100">
+                                                <?php if ($resTitle) { ?>
+                                                    <div class="fs-5 fw-bolder mb-2"><?php echo $resTitle; ?></div>
+                                                <?php } ?>
+                                                <video class="w-100" controls preload="metadata" src="<?php echo $resUrl; ?>">
+                                                    <a href="<?php echo $resUrl; ?>" target="_blank" rel="noopener">
+                                                        <?php echo $text_download_resource; ?>
+                                                    </a>
+                                                </video>
+                                            </div>
+                                        <?php } else { ?>
+                                            <div class="fs-5 fw-bolder"><?php echo $resTitle;
+                                                if (!empty($res['description'])
+                                                    && !preg_match('#^https?://#i', (string)$res['description'])
+                                                ) { ?>
+                                                    <div class="fs-6 fw-normal text-secondary mt-1"><?php echo $res['description']; ?></div>
+                                                <?php } ?>
+                                            </div>
+                                            <?php if ($resUrl) { ?>
+                                                <a class="ms-auto text-nowrap btn btn-outline-dark"
+                                                   href="<?php echo $resUrl; ?>"
+                                                   target="_blank"
+                                                   rel="noopener">
+                                                    <i class="fa-solid fa-<?php echo $mediaType === 'pdf' ? 'eye' : 'download'; ?>"></i>
+                                                    <?php echo $mediaType === 'pdf' ? $text_open_resource : $text_download_resource; ?>
+                                                </a>
+                                            <?php } ?>
+                                        <?php } ?>
+                                    </li>
+                                <?php } ?>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+<?php
+}
 if ($tags){ ?>
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingTags">

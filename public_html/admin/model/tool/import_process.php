@@ -228,6 +228,38 @@ class ModelToolImportProcess extends Model
                                 'multivalue' => 1,
                                 'alias'      => 'image url',
                             ],
+                        'audios.audio'                                     =>
+                            [
+                                'title'      => 'Audio URL or List of URLs',
+                                'split'      => 1,
+                                'multivalue' => 1,
+                                'alias'      => 'audio',
+                                'aliases'    => ['audio', 'mp3', 'sound'],
+                            ],
+                        'videos.video'                                     =>
+                            [
+                                'title'      => 'Video URL or List of URLs',
+                                'split'      => 1,
+                                'multivalue' => 1,
+                                'alias'      => 'video',
+                                'aliases'    => ['video', 'mp4'],
+                            ],
+                        'pdfs.pdf'                                         =>
+                            [
+                                'title'      => 'PDF URL or List of URLs',
+                                'split'      => 1,
+                                'multivalue' => 1,
+                                'alias'      => 'pdf',
+                                'aliases'    => ['pdf', 'files'],
+                            ],
+                        'archives.archive'                                 =>
+                            [
+                                'title'      => 'Archive URL or List of URLs',
+                                'split'      => 1,
+                                'multivalue' => 1,
+                                'alias'      => 'archive',
+                                'aliases'    => ['archive', 'zip'],
+                            ],
                         'product_options.name'                             =>
                             [
                                 'title'      => 'Option name (up to 255 chars)',
@@ -592,8 +624,11 @@ class ModelToolImportProcess extends Model
      */
     public function process_manufacturers_record(int|string $task_id, $data, $settings)
     {
-        $language_id = $settings['language_id'] ?: $this->language->getContentLanguageID();
-        $store_id = $settings['store_id'] ?: $this->session->data['current_store_id'];
+        $language_id = (int)($settings['language_id'] ?: $this->language->getContentLanguageID());
+        $store_id = (int)($settings['store_id']
+            ?? $this->session->data['current_store_id']
+            ?? $this->config->get('config_store_id')
+            ?? 0);
         $this->load->model('catalog/manufacturer');
         $this->initLogger(DIR_LOGS . "manufacturers_import_" . $task_id . ".txt");
         return $this->addUpdateBrand($data, $settings, $language_id, $store_id);
@@ -749,6 +784,20 @@ class ModelToolImportProcess extends Model
                 (string)$product_desc['name'],
                 $language_id
             );
+        }
+
+        foreach ($this->getImportableMediaTypes() as $mediaType => $mediaMeta) {
+            $dataKey = $mediaMeta['data_key'];
+            if (isset($data[$dataKey])) {
+                $this->importMediaResources(
+                    $mediaType,
+                    (array)$data[$dataKey],
+                    'products',
+                    $product_id,
+                    (string)$product_desc['name'],
+                    $language_id
+                );
+            }
         }
 
         if (isset($data['product_options'])) {
@@ -944,6 +993,10 @@ class ModelToolImportProcess extends Model
 
         $action = $data['action'][0] ?: 'update_or_insert';
         $manufacturer = $this->filterArray((array)$data['manufacturers']);
+        $manufacturer['name'] = is_array($manufacturer['name']) ? reset($manufacturer['name']) : $manufacturer['name'];
+        $manufacturer['sort_order'] = is_array($manufacturer['sort_order'])
+            ? (int)reset($manufacturer['sort_order'])
+            : (int)$manufacturer['sort_order'];
         $manufacturer_id = $this->_process_manufacturer($manufacturer['name'], $manufacturer['sort_order'], $store_id);
 
         //validate actions
@@ -1164,21 +1217,20 @@ class ModelToolImportProcess extends Model
         $language_list = $this->language->getAvailableLanguages();
         $rm = new AResourceManager();
         $rm->setType('image');
-        //delete existing resources
+        //delete existing resources once, then import every URL
         $rm->unmapAndDeleteResources($object_txt_id, $object_id, 'image');
 
         //IMAGE PROCESSING
-        $data['image'] = (array)$data['image'];
-        foreach ($data['image'] as $srcUrl) {
-            if (!$srcUrl) {
-                continue;
-            } else {
-                if (is_array($srcUrl)) {
-                    //we have an array from list of values. Run again
-                    $this->migrateImages(['image' => $srcUrl], $object_txt_id, $object_id, $title, $language_id);
-                    continue;
-                }
+        $imageUrls = [];
+        $imageData = (array)($data['image'] ?? []);
+        array_walk_recursive($imageData, function ($url) use (&$imageUrls) {
+            $url = trim((string)$url);
+            if ($url !== '') {
+                $imageUrls[] = $url;
             }
+        });
+
+        foreach ($imageUrls as $srcUrl) {
             //check if image is absolute path or remote URL
             $host = parse_url($srcUrl, PHP_URL_HOST);
             $imageBasename = basename(parse_url($srcUrl, PHP_URL_PATH));
@@ -1238,6 +1290,280 @@ class ModelToolImportProcess extends Model
         }
 
         return true;
+    }
+
+    /**
+     * Media resource types supported by product CSV import.
+     *
+     * @return array
+     */
+    protected function getImportableMediaTypes(): array
+    {
+        return [
+            'audio'   => [
+                'data_key'   => 'audios',
+                'field_key'  => 'audio',
+                'extensions' => ['mp3', 'wav', 'ogg'],
+                'label'      => 'Audio',
+            ],
+            'video'   => [
+                'data_key'   => 'videos',
+                'field_key'  => 'video',
+                'extensions' => ['avi', 'mpg', 'mpeg', 'mov', 'flv', 'mp4', 'webm', 'ogg'],
+                'label'      => 'Video',
+            ],
+            'pdf'     => [
+                'data_key'   => 'pdfs',
+                'field_key'  => 'pdf',
+                'extensions' => ['pdf'],
+                'label'      => 'PDF',
+            ],
+            'archive' => [
+                'data_key'   => 'archives',
+                'field_key'  => 'archive',
+                'extensions' => ['zip', 'rar', 'gz', '7z'],
+                'label'      => 'Archive',
+            ],
+        ];
+    }
+
+    /**
+     * Import PDF resources from URLs/paths and map them to a product.
+     *
+     * @param array $data
+     * @param string|null $object_txt_id
+     * @param int|null $object_id
+     * @param string|null $title
+     * @param int|null $language_id
+     *
+     * @return bool
+     * @throws AException
+     */
+    public function importPdfs(
+        array   $data,
+        ?string $object_txt_id = '',
+        ?int    $object_id = 0,
+        ?string $title = '',
+        ?int    $language_id = 0
+    )
+    {
+        return $this->importMediaResources('pdf', $data, $object_txt_id, $object_id, $title, $language_id);
+    }
+
+    /**
+     * Import media resources (audio/video/pdf/archive) from URLs/paths and map them to a product.
+     * Existing mapped resources of the same type are kept; duplicate assignments are skipped.
+     *
+     * @param string $mediaType
+     * @param array $data
+     * @param string|null $object_txt_id
+     * @param int|null $object_id
+     * @param string|null $title
+     * @param int|null $language_id
+     *
+     * @return bool
+     * @throws AException
+     */
+    public function importMediaResources(
+        string  $mediaType,
+        array   $data,
+        ?string $object_txt_id = '',
+        ?int    $object_id = 0,
+        ?string $title = '',
+        ?int    $language_id = 0
+    )
+    {
+        $mediaTypes = $this->getImportableMediaTypes();
+        if (!isset($mediaTypes[$mediaType])) {
+            $this->toLog("Warning: Unsupported media type " . $mediaType . ".");
+            return true;
+        }
+        if ($object_txt_id !== 'products' || !$object_id || !$data) {
+            $this->toLog("Warning: Missing " . $mediaTypes[$mediaType]['label'] . "s for " . $object_txt_id . ".");
+            return true;
+        }
+
+        $fieldKey = $mediaTypes[$mediaType]['field_key'];
+        $allowedExt = $mediaTypes[$mediaType]['extensions'];
+        $label = $mediaTypes[$mediaType]['label'];
+
+        $language_list = $this->language->getAvailableLanguages();
+        $rm = new AResourceManager();
+        $rm->setType($mediaType);
+
+        $existing = $rm->getResources($object_txt_id, $object_id, $language_id);
+        $mappedBasenames = [];
+        $mappedUrls = [];
+        foreach ($existing as $res) {
+            if (!empty($res['name'])) {
+                $mappedBasenames[mb_strtolower($res['name'])] = true;
+            }
+            if (!empty($res['title'])) {
+                $mappedBasenames[mb_strtolower($res['title'])] = true;
+            }
+            if (!empty($res['description'])) {
+                $mappedUrls[mb_strtolower(trim($res['description']))] = true;
+            }
+            if (!empty($res['resource_path'])) {
+                $mappedBasenames[mb_strtolower(basename($res['resource_path']))] = true;
+            }
+        }
+
+        $data[$fieldKey] = (array)($data[$fieldKey] ?? []);
+        foreach ($data[$fieldKey] as $srcUrl) {
+            if (!$srcUrl) {
+                continue;
+            }
+            if (is_array($srcUrl)) {
+                $this->importMediaResources(
+                    $mediaType,
+                    [$fieldKey => $srcUrl],
+                    $object_txt_id,
+                    $object_id,
+                    $title,
+                    $language_id
+                );
+                continue;
+            }
+
+            $srcUrl = trim((string)$srcUrl);
+            if ($srcUrl === '') {
+                continue;
+            }
+
+            // Auto-split cells that contain multiple absolute URLs (comma/space separated)
+            $autoUrls = $this->extractMediaUrls($srcUrl);
+            if (count($autoUrls) > 1) {
+                $this->importMediaResources(
+                    $mediaType,
+                    [$fieldKey => $autoUrls],
+                    $object_txt_id,
+                    $object_id,
+                    $title,
+                    $language_id
+                );
+                continue;
+            }
+            if (count($autoUrls) === 1) {
+                $srcUrl = $autoUrls[0];
+            }
+
+            $host = parse_url($srcUrl, PHP_URL_HOST);
+            $fileBasename = basename((string)parse_url($srcUrl, PHP_URL_PATH));
+            if (!$fileBasename) {
+                $this->toLog("Error: Unable to resolve " . $label . " filename from " . $srcUrl);
+                continue;
+            }
+
+            $ext = strtolower(pathinfo($fileBasename, PATHINFO_EXTENSION));
+            if ($ext && !in_array($ext, $allowedExt, true)) {
+                $this->toLog(
+                    "Error: Skipping non-" . $label . " file " . $srcUrl
+                    . " (allowed: " . implode(', ', $allowedExt) . ")"
+                );
+                continue;
+            }
+
+            $srcKey = mb_strtolower($srcUrl);
+            $baseKey = mb_strtolower($fileBasename);
+            if (isset($mappedUrls[$srcKey]) || isset($mappedBasenames[$baseKey])) {
+                $this->toLog(
+                    "Skip " . $label . " resource (already assigned): " . $fileBasename
+                    . " for product ID " . $object_id
+                );
+                continue;
+            }
+
+            $dstFileName = DIR_RESOURCE . $rm->getTypeDir() . str_replace('/', DS, $fileBasename);
+            if (!is_dir(DIR_RESOURCE . $rm->getTypeDir())) {
+                @mkdir(DIR_RESOURCE . $rm->getTypeDir(), 0777, true);
+            }
+
+            if ($host === null) {
+                if (!is_file($srcUrl) || !copy($srcUrl, $dstFileName)) {
+                    $this->toLog("Error: Unable to copy file " . $srcUrl . " to " . $dstFileName);
+                    continue;
+                }
+            } else {
+                $fl = new AFile();
+                if (($file = $fl->downloadFile($srcUrl)) === false) {
+                    $this->toLog("Error: Unable to download " . $label . " from " . $srcUrl);
+                    continue;
+                }
+                if (!pathinfo($dstFileName, PATHINFO_EXTENSION)) {
+                    $fExt = strtolower((string)getFileExtensionByMimeType($file->content_type));
+                    if ($fExt && !in_array($fExt, $allowedExt, true)) {
+                        $this->toLog("Error: Downloaded file is not a valid " . $label . " from " . $srcUrl);
+                        continue;
+                    }
+                    $useExt = $fExt ?: $allowedExt[0];
+                    $dstFileName .= '.' . $useExt;
+                    $fileBasename .= '.' . $useExt;
+                    $baseKey = mb_strtolower($fileBasename);
+                }
+                if (!$fl->writeDownloadToFile($file, $dstFileName)) {
+                    $this->toLog("Error: Unable to save downloaded " . $label . " to " . $dstFileName);
+                    continue;
+                }
+            }
+
+            $resource = [
+                'language_id'   => $language_id,
+                'name'          => [],
+                'title'         => [],
+                'description'   => $srcUrl,
+                'resource_path' => $fileBasename,
+                'resource_code' => '',
+            ];
+            foreach ($language_list as $lang) {
+                $resource['name'][$lang['language_id']] = $fileBasename;
+                $resource['title'][$lang['language_id']] = $title
+                    ? ($title . ' - ' . $fileBasename)
+                    : $fileBasename;
+            }
+            $resource_id = $rm->addResource($resource);
+            if ($resource_id) {
+                $this->toLog("Map " . $label . " resource : " . $fileBasename . " " . $resource_id);
+                $rm->mapResource($object_txt_id, $object_id, $resource_id);
+                $mappedBasenames[$baseKey] = true;
+                $mappedUrls[$srcKey] = true;
+            } else {
+                $this->toLog("Error: " . $label . " resource can not be created. " . $this->db->error);
+            }
+            usleep(50000);
+        }
+
+        return true;
+    }
+
+    /**
+     * Extract one or more http(s) URLs from a CSV cell value.
+     *
+     * @param string $value
+     *
+     * @return array
+     */
+    protected function extractMediaUrls(string $value): array
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return [];
+        }
+        if (preg_match_all('#https?://[^\s,<"\']+#i', $value, $matches)) {
+            return array_values(array_filter(array_map('trim', $matches[0])));
+        }
+        return [$value];
+    }
+
+    /**
+     * @deprecated Use extractMediaUrls()
+     * @param string $value
+     *
+     * @return array
+     */
+    protected function extractPdfUrls(string $value): array
+    {
+        return $this->extractMediaUrls($value);
     }
 
     /**
