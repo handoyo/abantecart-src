@@ -427,7 +427,7 @@ class ModelCatalogProduct extends Model
 
     public function saveSettings(int $product_id, $settings)
     {
-        if (!$settings) {
+        if (!$settings || !$product_id) {
             return;
         }
 
@@ -436,9 +436,9 @@ class ModelCatalogProduct extends Model
              FROM " . $this->db->table("products") . " 
              WHERE product_id = " . $product_id
         )->row['settings'];
-        $priorSettings = unserialize($priorSettings) ? : [];
+        $priorSettings = unserialize((string)$priorSettings) ? : [];
         $settings = is_serialized($settings) ? unserialize($settings) : $settings;
-        $newSettings = array_merge($priorSettings, $settings);
+        $newSettings = array_merge($priorSettings, (array)$settings);
         $this->db->query(
             "UPDATE " . $this->db->table("products") . "
              SET settings = '" . $this->db->escape(serialize($newSettings)) . "'
@@ -645,8 +645,9 @@ class ModelCatalogProduct extends Model
         $data['with_values'] = $data['with_values'] ?? true;
         $am = new AAttribute_Manager();
 
-        $attributeInfo =
-            $data['attribute_id'] && $data['with_values'] ? $am->getAttribute((int) $data['attribute_id']) : [];
+        $attributeInfo = $data['attribute_id'] && $data['with_values'] 
+            ? $am->getAttribute((int) $data['attribute_id']) 
+            : [];
 
         if ($attributeInfo) {
             $data['element_type'] = $attributeInfo['element_type'];
@@ -657,6 +658,20 @@ class ModelCatalogProduct extends Model
             $data['settings'] = $attributeInfo['settings'];
         } else {
             $data['placeholder'] = $data['option_placeholder'];
+        }
+
+        if ($data['element_type'] == 'U') {
+            $settings = is_array($data['settings'])
+                ? $data['settings']
+                : (unserialize((string)$data['settings'], ['allowed_classes' => false]) ?: []);
+            $settings = array_filter($settings);
+            if (empty($settings['extensions'])) {
+                $settings['extensions'] = 'jpeg,jpg,avif,png,gif,webp';
+            }
+            $data['settings'] = $settings;
+        }
+        if (is_array($data['settings'])) {
+            $data['settings'] = serialize($data['settings']);
         }
 
         $this->db->query(
