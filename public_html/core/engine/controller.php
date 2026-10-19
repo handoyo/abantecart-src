@@ -208,7 +208,13 @@ abstract class AController
     {
         $vars = get_object_vars($this);
         foreach ($vars as $key => $val) {
-            $this->$key = null;
+            if(is_array($this->$key)){
+                $this->$key = [];
+            }elseif(is_object($this->$key)){
+                $this->$key = null;
+            }else {
+                $this->$key = null;
+            }
         }
     }
 
@@ -599,7 +605,7 @@ abstract class AController
         $request = $this->request->get;
         $page = (int)$request['page'] ?: 1;
         $limit = (int)$request['limit'] ?: $this->config->get('config_catalog_limit');
-        $sorting_href = $request['sort'];
+        $sorting_href = (string)$request['sort'];
         if (!$this->data['sorts']) {
             $this->prepareProductListingParameters();
         }

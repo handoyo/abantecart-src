@@ -307,16 +307,17 @@ try {
     require_once(DIR_CORE . 'lib' . DS . 'pagination.php');
     require_once(DIR_CORE . 'lib' . DS . 'request.php');
     require_once(DIR_CORE . 'lib' . DS . 'response.php');
-    require_once(DIR_CORE . 'lib' . DS . 'session.php');
+    require_once(DIR_CORE . 'lib' . DS . 'ASession.php');
     require_once(DIR_CORE . 'lib' . DS . 'template.php');
     require_once(DIR_CORE . 'lib' . DS . 'xml2array.php');
     require_once(DIR_CORE . 'lib' . DS . 'data.php');
     require_once(DIR_CORE . 'lib' . DS . 'file.php');
     require_once(DIR_CORE . 'lib' . DS . 'download.php');
+    require_once(DIR_CORE . 'lib' . DS . 'AUrlRedirect.php');
 
 // Application Classes
     require_once(DIR_CORE . 'lib' . DS . 'customer.php');
-    require_once(DIR_CORE . 'lib' . DS . 'order.php');
+    require_once(DIR_CORE . 'lib' . DS . 'AOrder.php');
     require_once(DIR_CORE . 'lib' . DS . 'order_status.php');
     require_once(DIR_CORE . 'lib' . DS . 'currency.php');
     require_once(DIR_CORE . 'lib' . DS . 'tax.php');
@@ -330,7 +331,7 @@ try {
     require_once(DIR_CORE . 'lib' . DS . 'menu_control_storefront.php');
     require_once(DIR_CORE . 'lib' . DS . 'rest.php');
     require_once(DIR_CORE . 'lib' . DS . 'filter.php');
-    require_once(DIR_CORE . 'lib' . DS . 'listing.php');
+    require_once(DIR_CORE . 'lib' . DS . 'AListing.php');
     require_once(DIR_CORE . 'lib' . DS . 'task_manager.php');
     require_once(DIR_CORE . 'lib' . DS . 'im.php');
     require_once(DIR_CORE . 'lib' . DS . 'csrf_token.php');
@@ -347,7 +348,7 @@ try {
         require_once(DIR_CORE . 'lib' . DS . 'extension_manager.php');
         require_once(DIR_CORE . 'lib' . DS . 'resource_manager.php');
         require_once(DIR_CORE . 'lib' . DS . 'ResourceUploadHandler.php');
-        require_once(DIR_CORE . 'lib' . DS . 'listing_manager.php');
+        require_once(DIR_CORE . 'lib' . DS . 'AListingManager.php');
         require_once(DIR_CORE . 'lib' . DS . 'attribute_manager.php');
         require_once(DIR_CORE . 'lib' . DS . 'language_manager.php');
         require_once(DIR_CORE . 'lib' . DS . 'backup.php');

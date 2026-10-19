@@ -156,7 +156,7 @@ class ControllerPagesCheckoutCart extends AController
                                         $this->session->data['error'] = implode('<br/>', $file_errors);
                                         redirect($_SERVER['HTTP_REFERER']);
                                     } else {
-                                        $result = move_uploaded_file($file_data['tmp_name'], $file_path_info['path']);
+                                        $result = moveUploadedFile( $file_data['tmp_name'], $file_path_info['path'] );
                                         if (!$result || $this->request->files['option']['error'][$id]) {
                                             $this->session->data['error'] .= '<br>Error: '
                                                 . getTextUploadError(
@@ -219,7 +219,7 @@ class ControllerPagesCheckoutCart extends AController
                     }
 
                     if (isset($post['redirect'])
-                        && parse_url($post['redirect'], PHP_URL_HOST) == parse_url($this->config->get('config_url'), PHP_URL_HOST)
+                        && parse_url((string)$post['redirect'], PHP_URL_HOST) == parse_url((string)$this->config->get('config_url'), PHP_URL_HOST)
                     ) {
                         $this->session->data['redirect'] = $post['redirect'];
                     }
